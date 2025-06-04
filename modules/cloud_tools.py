@@ -165,24 +165,11 @@ class AWSTools:
             })
         return {"DBInstances": db_instances}
 
-
-# Part 2 will provide GCPTools and AzureTools classes.
-# Part 3 will provide the __main__ block to demonstrate usage.
-# Devin/modules/cloud_tools.py
-# (Continuation - Requires Part 1 for AWSTools class)
-# Purpose: Provides low-level, provider-specific tools for direct interaction
-#          with cloud resources (AWS, GCP, Azure).
-# Cloud resource management ☁️🔧
-
 import logging # Already imported in Part 1
 import time # Already imported in Part 1
 import random # Already imported in Part 1
 import uuid # Already imported in Part 1
 from typing import List, Dict, Any, Optional # Already imported in Part 1
-
-# --- Placeholder class from Part 1 (assume it is here or imported) ---
-# class AWSTools: ...
-# --- End of assumed Part 1 definitions ---
 
 class GCPTools:
     """
@@ -357,4 +344,99 @@ class AzureTools:
             }
         return None
 
-# Part 3 will provide the __main__ block to demonstrate usage of all three tool classes.
+# Devin/modules/cloud_tools.py
+# (Continuation - Requires Part 1 and 2 for AWSTools, GCPTools, and AzureTools classes)
+# Purpose: Provides low-level, provider-specific tools for direct interaction
+#          with cloud resources (AWS, GCP, Azure).
+# Cloud resource management ☁️🔧
+
+import logging # Already imported in Part 1
+import json # Imported for this part for pretty printing
+import random # Already imported in Part 1
+import uuid # Already imported in Part 1
+from typing import List, Dict, Any, Optional # Already imported in Part 1
+
+# --- Example Usage Tying All Toolsets Together ---
+if __name__ == "__main__":
+    print("================================================================")
+    print("=== Cloud Tools Module Prototype (Provider-Specific Demos) ☁️🔧 ===")
+    print("================================================================")
+
+    # Use a helper for pretty printing JSON-like dictionary outputs
+    def pretty_print_dict(data: Any):
+        print(json.dumps(data, indent=2, default=str))
+
+
+    # --- 1. AWS Tools Demonstration ---
+    print("\n---------- AWS Tools Demo ----------")
+    # Initialize the AWS toolbox
+    aws_tools = AWSTools(
+        aws_access_key_id_placeholder="CONCEPTUAL_AKIA...",
+        aws_secret_access_key_placeholder="CONCEPTUAL_SECRET...",
+        region_name="us-west-2"
+    )
+
+    # Use a tool to describe EC2 instances
+    print("\n[AWS] Describing EC2 Instances...")
+    ec2_instances_response = aws_tools.ec2_describe_instances()
+    pretty_print_dict(ec2_instances_response)
+
+    # Use a tool to list S3 buckets
+    print("\n[AWS] Listing S3 Buckets...")
+    s3_buckets_response = aws_tools.s3_list_buckets()
+    pretty_print_dict(s3_buckets_response)
+
+    # Use a tool to describe RDS instances
+    print("\n[AWS] Describing RDS DB Instances...")
+    rds_instances_response = aws_tools.rds_describe_db_instances(region="us-west-2")
+    pretty_print_dict(rds_instances_response)
+
+
+    # --- 2. GCP Tools Demonstration ---
+    print("\n\n---------- GCP Tools Demo ----------")
+    # Initialize the GCP toolbox
+    gcp_tools = GCPTools(
+        project_id_placeholder="devin-ai-project-123456",
+        gcp_credentials_path_placeholder="/path/to/conceptual/gcp_creds.json"
+    )
+
+    # Use a tool to list Compute Engine instances
+    print("\n[GCP] Listing Compute Engine Instances in zone 'us-central1-a'...")
+    gce_instances_response = gcp_tools.compute_instances_list(zone="us-central1-a")
+    pretty_print_dict(gce_instances_response)
+
+    # Use a tool to list IAM Service Accounts
+    print("\n[GCP] Listing IAM Service Accounts...")
+    iam_sa_response = gcp_tools.iam_service_accounts_list()
+    pretty_print_dict(iam_sa_response)
+
+
+    # --- 3. Azure Tools Demonstration ---
+    print("\n\n---------- Azure Tools Demo ----------")
+    # Initialize the Azure toolbox
+    azure_tools = AzureTools(
+        subscription_id_placeholder=str(uuid.uuid4()), # Generate a conceptual UUID for subscription ID
+        azure_credentials_placeholder="ConceptualServicePrincipalCredentials"
+    )
+    
+    # Define conceptual resource group for the demo
+    azure_rg = "Devin-Resource-Group"
+
+    # Use a tool to list Virtual Machines in a resource group
+    print(f"\n[Azure] Listing Virtual Machines in Resource Group '{azure_rg}'...")
+    azure_vms_response = azure_tools.vm_list(resource_group_name=azure_rg)
+    pretty_print_dict(azure_vms_response)
+    
+    # Use a tool to list Storage Containers in a storage account
+    azure_sa = "devinstorageaccount123"
+    print(f"\n[Azure] Listing Storage Containers in Account '{azure_sa}'...")
+    azure_containers_response = azure_tools.storage_account_list_containers(
+        resource_group_name=azure_rg,
+        account_name=azure_sa
+    )
+    pretty_print_dict(azure_containers_response)
+
+
+    print("\n================================================================")
+    print("=== Cloud Tools Module Prototype Complete ===")
+    print("================================================================")
