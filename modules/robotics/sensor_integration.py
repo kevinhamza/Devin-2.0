@@ -1,4 +1,4 @@
-# Devin/robotics/sensor_integration.py
+# Devin/modules/robotics/sensor_integration.py
 # Purpose: Provides a framework for integrating with and reading data from
 #          various robot sensors like cameras, IMUs, and LiDAR.
 
