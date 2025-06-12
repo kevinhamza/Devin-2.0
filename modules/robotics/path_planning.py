@@ -180,3 +180,151 @@ class PathPlanner:
 
         logger.warning(f"No path found from {start} to {goal}.")
         return None # No path was found
+
+import logging
+import heapq
+from collections import defaultdict # Added for Part 1 logic
+from typing import List, Tuple, Dict, Optional, Set, Any
+from dataclasses import dataclass, field
+import numpy as np
+import math # For sqrt
+
+
+    def _smooth_path_conceptual(self, path: PathType) -> PathType:
+        """
+        Conceptually smooths a jagged grid-based path.
+        A simple approach is to remove unnecessary intermediate waypoints on straight lines.
+        More advanced methods use splines or other curve-fitting algorithms.
+        """
+        if not path or len(path) < 3:
+            return path # Nothing to smooth
+
+        logger.info("Smoothing the raw path...")
+        # Simple "shortcut" smoothing:
+        smoothed_path = [path[0]]
+        i = 0
+        while i < len(path) - 1:
+            # Check for line-of-sight from current point `i` to a future point `j`
+            # For this conceptual version, we'll just remove redundant points on straight axis-aligned lines
+            r1, c1 = path[i]
+            r2, c2 = path[i+1]
+            
+            # This is a very basic smoother. A real one would use more advanced geometry.
+            # Look ahead to see if the direction changes.
+            if i < len(path) - 2:
+                r3, c3 = path[i+2]
+                # Vector from i to i+1
+                dir1 = (r2 - r1, c2 - c1)
+                # Vector from i+1 to i+2
+                dir2 = (r3 - r2, c3 - c2)
+                
+                if dir1 == dir2: # Still moving in the same direction, so skip the intermediate point
+                    i += 1
+                    continue
+
+            smoothed_path.append(path[i+1])
+            i += 1
+            
+        logger.info(f"  Path smoothed from {len(path)} points to {len(smoothed_path)} points.")
+        return smoothed_path
+
+    def find_path(self, start: GridLocation, goal: GridLocation, smooth: bool = True) -> Optional[PathType]:
+        """
+        The main public method to find and optionally smooth a path.
+
+        Args:
+            start (GridLocation): The starting coordinates (row, col).
+            goal (GridLocation): The goal coordinates (row, col).
+            smooth (bool): If True, applies a conceptual smoothing algorithm to the path.
+
+        Returns:
+            Optional[PathType]: The final path, or None if no path is found.
+        """
+        raw_path = self.plan_path_astar(start, goal)
+        
+        if not raw_path:
+            return None
+            
+        if smooth:
+            return self._smooth_path_conceptual(raw_path)
+        else:
+            return raw_path
+
+# --- Helper function for visualization ---
+def visualize_path_on_grid(grid: np.ndarray, path: Optional[PathType] = None, start: Optional[GridLocation] = None, goal: Optional[GridLocation] = None):
+    """Prints a text-based visualization of the grid, obstacles, and path."""
+    # Create a copy to draw on
+    vis_grid = np.full(grid.shape, fill_value=".", dtype=str)
+    vis_grid[grid == 1] = "█" # Obstacles
+
+    if path:
+        for r, c in path:
+            vis_grid[r, c] = "*" # Path
+            
+    if start:
+        vis_grid[start] = "S" # Start
+    
+    if goal:
+        vis_grid[goal] = "G" # Goal
+        
+    print("\n--- Path Visualization ---")
+    for row in vis_grid:
+        print(" ".join(row))
+    print("------------------------")
+    print("Legend: S=Start, G=Goal, █=Obstacle, *=Path")
+
+
+# --- Example Usage ---
+if __name__ == "__main__":
+    print("=========================================================")
+    print("=== Robotics Path Planner Prototype 🗺️ ===")
+    print("=========================================================")
+
+    # Create a 15x20 grid map with obstacles (1) and free space (0)
+    # Using NumPy for efficient array operations
+    grid_map = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ])
+    
+    # Initialize the planner with the map
+    path_planner = PathPlanner(occupancy_grid=grid_map)
+    
+    # --- Case 1: Find a valid path ---
+    print("\n--- Case 1: Finding a path from (0, 0) to (14, 19) ---")
+    start_pos = (0, 0)
+    goal_pos = (14, 19)
+    
+    final_path = path_planner.find_path(start_pos, goal_pos, smooth=True)
+    
+    visualize_path_on_grid(grid_map, final_path, start_pos, goal_pos)
+    if final_path:
+        print(f"\nSmoothed path found with {len(final_path)} waypoints.")
+        # print(f"Path waypoints: {final_path}")
+    
+    # --- Case 2: No path available ---
+    print("\n--- Case 2: Trying to find a path to an unreachable goal (inside an obstacle) ---")
+    unreachable_goal = (7, 10)
+    
+    no_path = path_planner.find_path(start_pos, unreachable_goal, smooth=True)
+    
+    visualize_path_on_grid(grid_map, no_path, start_pos, unreachable_goal)
+    if not no_path:
+        print("\nAs expected, no path was found to the unreachable goal.")
+
+    print("\n=========================================================")
+    print("=== Path Planner Prototype Complete ===")
+    print("=========================================================")
