@@ -304,3 +304,126 @@
 #     print("=========================================================")
 
 
+# Devin/modules/robotics/voice_assistant.py
+# Purpose: A high-level voice assistant that orchestrates dedicated TTS and STT
+#          modules to manage a conversational user interface.
+
+import logging
+import time
+from typing import Optional
+
+try:
+    from modules.robotics.text_to_speech import TextToSpeech
+    from modules.robotics.speech_to_text import SpeechToText
+    DEVIN_CORE_AVAILABLE = True
+except ImportError as e:
+    DEVIN_CORE_AVAILABLE = False
+    _import_error = e
+
+# (Logger setup is identical to the TTS module)
+
+class VoiceAssistant:
+    """
+    Orchestrates TextToSpeech and SpeechToText to provide a
+    seamless conversational experience.
+    """
+    def __init__(self, wake_word: str = "devin"):
+        if not DEVIN_CORE_AVAILABLE:
+            raise ImportError(f"A core Devin module is missing. Error: {_import_error}")
+
+        self.tts = TextToSpeech(rate=190)
+        self.stt = SpeechToText()
+        self.wake_word = wake_word.lower()
+        self.is_awake = False
+        self.last_interaction_time = 0
+        self.timeout_seconds = 30
+        logger.info(f"Voice Assistant ready. Listening for wake word: '{self.wake_word}'")
+
+    def speak(self, text: str, wait: bool = True):
+        self.tts.speak(text, wait=wait)
+
+    def ask_question(self, question: str) -> Optional[str]:
+        self.speak(question, wait=True)
+        return self.stt.listen_for_single_phrase()
+
+    def _handle_background_speech(self, text: str):
+        """Callback for the STT listener to process wake words and commands."""
+        current_time = time.time()
+        
+        if not self.is_awake:
+            if text.strip().startswith(self.wake_word):
+                command = text.strip()[len(self.wake_word):].strip()
+                logger.info(f"Wake word detected!")
+                self.is_awake = True
+                self.last_interaction_time = current_time
+                self.speak("Yes?", wait=False)
+                if command:
+                    self._process_command(command)
+        else:
+            self.last_interaction_time = current_time
+            self._process_command(text)
+            
+    def _process_command(self, command: str):
+        """(Placeholder) Processes a recognized command."""
+        logger.info(f"Processing command: '{command}'")
+        # In a real system, this would trigger the Task Orchestrator.
+        if "time is it" in command:
+            current_time_str = time.strftime("%I:%M %p")
+            self.speak(f"The current time is {current_time_str}")
+        elif "go to sleep" in command:
+            self.speak("Going back to sleep.")
+            self.is_awake = False
+        else:
+            self.speak(f"I understood the command: {command}")
+
+    def start(self):
+        """Starts the main operational loop of the voice assistant."""
+        self.stt.start_background_listening(self._handle_background_speech)
+        logger.info("Conversational loop started. Press Ctrl+C to exit.")
+        try:
+            while True:
+                if self.is_awake and (time.time() - self.last_interaction_time > self.timeout_seconds):
+                    logger.info("Assistant timing out due to inactivity.")
+                    self.speak("Going to sleep now.", wait=False)
+                    self.is_awake = False
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("Shutting down Voice Assistant.")
+            self.stt.stop_background_listening()
+
+if __name__ == "__main__":
+    print("=========================================================")
+    print("=== Refactored Voice Assistant (Live Demo) 🗣️🧠 ===")
+    print("=========================================================")
+    
+    if not DEVIN_CORE_AVAILABLE:
+        print(f"\nERROR: A core Devin module is missing. Error: {_import_error}")
+    else:
+        print("!!! PREREQUISITE: This demo requires a working microphone and speaker. !!!")
+        print("Please ensure you have installed the necessary libraries:")
+        print("  pip install pyttsx3 SpeechRecognition PyAudio")
+        print("On Linux, you may also need: sudo apt-get install portaudio19-dev espeak\n")
+
+        try:
+            assistant = VoiceAssistant(wake_word="devin")
+
+            # --- 1. Demonstrate a direct, blocking question ---
+            assistant.speak("To begin the live demo, I need to ask you a question.", wait=True)
+            user_name = assistant.ask_question("Please state your name clearly into the microphone.")
+            
+            if user_name:
+                assistant.speak(f"It's a pleasure to meet you, {user_name}.")
+            else:
+                assistant.speak("I didn't catch your name. We'll proceed anyway.")
+            
+            # --- 2. Demonstrate the background listener and conversation loop ---
+            assistant.speak("I will now listen in the background. Please say my name, followed by a command.", wait=True)
+            print("\n--- Listening for 'devin, what time is it?' or 'devin, go to sleep' ---")
+            assistant.start()
+
+        except Exception as e:
+            logger.error(f"Demo failed to run: {e}")
+
+    print("\n=========================================================")
+    print("=== Voice Assistant Prototype Complete ===")
+    print("=========================================================")
