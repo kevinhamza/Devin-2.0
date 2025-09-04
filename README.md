@@ -82,7 +82,7 @@ sequenceDiagram
     MainLoop->>...: (Loop continues)
 ````
 
-For a more detailed breakdown, see the full [Architecture Document](https://github.com/kevinhamza/Devin-2.0/docs/ARCHITECTURE.md).
+For a more detailed breakdown, see the full [Architecture Document](https://github.com/kevinhamza/Devin-2.0/blob/main/docs/ARCHITECTURE.md).
 
 -----
 
@@ -93,8 +93,8 @@ Follow these steps to get the Devin AGI project up and running on your local mac
 ### 1\. Clone the Repository
 
 ```bash
-git clone [https://github.com/](https://github.com/)[your_username]/devin-agi.git
-cd devin-agi
+git clone https://github.com/kevinhamza/Devin-2.0.git
+cd Devin-2.0
 ```
 
 ### 2\. Run the Installation Script
@@ -182,12 +182,12 @@ make test
 
 For more detailed information on specific aspects of the project, please see the full documentation:
 
-  - [**System Architecture**](https://www.google.com/search?q=./docs/ARCHITECTURE.md)
-  - [**API Documentation**](https://www.google.com/search?q=./docs/API.md) (including Swagger and Postman files)
-  - [**Ethical Guidelines**](https://www.google.com/search?q=./docs/ETHICAL_GUIDELINES.md)
-  - [**Incident Response Playbooks**](https://www.google.com/search?q=./docs/RESPONSE_PLAYBOOKS.md)
-  - [**Troubleshooting Guide**](https://www.google.com/search?q=./docs/TROUBELSHOOTING.md)
-  - [**Compliance Guides**](https://www.google.com/search?q=./docs/COMPLIANCE/)
+  - [**System Architecture**](https://github.com/kevinhamza/Devin-2.0/blob/main/docs/ARCHITECTURE.md)
+  - [**API Documentation**](https://github.com/kevinhamza/Devin-2.0/blob/main/docs/API.md) (including Swagger and Postman files)
+  - [**Ethical Guidelines**](https://github.com/kevinhamza/Devin-2.0/blob/main/docs/ETHICAL_GUIDELINES.md)
+  - [**Incident Response Playbooks**](https://github.com/kevinhamza/Devin-2.0/blob/main/docs/RESPONSE_PLAYBOOKS.md)
+  - [**Troubleshooting Guide**](https://github.com/kevinhamza/Devin-2.0/blob/main/docs/TROUBLESHOOTING.md)
+  - [**Compliance Guides**](https://github.com/kevinhamza/Devin-2.0/tree/main/docs/COMPLIANCE)
 
 -----
 
@@ -197,7 +197,7 @@ This project is a powerful tool and is intended for educational and research pur
 
 **Never use the penetration testing tools on any system for which you do not have explicit, written authorization.**
 
-All users are expected to adhere to the principles outlined in the [Ethical Hacking Guidelines](https://www.google.com/search?q=./docs/ETHICAL_GUIDELINES.md). Misuse of this software is strictly discouraged.
+All users are expected to adhere to the principles outlined in the [Ethical Hacking Guidelines](https://github.com/kevinhamza/Devin-2.0/blob/main/docs/ETHICAL_GUIDELINES.md). Misuse of this software is strictly discouraged.
 
 -----
 
