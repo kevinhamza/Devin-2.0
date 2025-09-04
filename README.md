@@ -82,7 +82,7 @@ sequenceDiagram
     MainLoop->>...: (Loop continues)
 ````
 
-For a more detailed breakdown, see the full [Architecture Document](https://www.google.com/search?q=./docs/ARCHITECTURE.md).
+For a more detailed breakdown, see the full [Architecture Document](https://github.com/kevinhamza/Devin-2.0/docs/ARCHITECTURE.md).
 
 -----
 
