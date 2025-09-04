@@ -16,12 +16,12 @@ def read_requirements():
 setup(
     name="devin-agi",
     version="1.0.0",
-    author="[Your Name]",
-    author_email="[your_email@example.com]",
+    author="Kevin Devin",
+    author_email="kevin.x.hamza@gmail.com",
     description="Devin: An Autonomous General Intelligence for Complex Software and Cybersecurity Tasks",
     long_description=Path("README.md").read_text(),
     long_description_content_type="text/markdown",
-    url="[https://github.com/your_username/devin-agi]",  # Replace with your project's URL
+    url="https://github.com/kevinhamza/Devin-2.0",  # Replace with your project's URL
     packages=find_packages(),
     install_requires=read_requirements(),
     entry_points={
