@@ -43,3 +43,6 @@ reportlab
 
 # --- Other Utilities ---
 tqdm # For progress bars
+webdriver-manager
+pyautogui
+
