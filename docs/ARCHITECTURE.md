@@ -35,7 +35,7 @@ sequenceDiagram
     participant MainLoop (main.py)
     participant AIAgent
     participant ToolExecutor
-#    participant Tool (e.g., CloudServicesManager)
+    participant Tool # (e.g., CloudServicesManager)
 
     User->>MainLoop: "Stop all non-prod AWS VMs"
     MainLoop->>AIAgent: Formulate a plan for the goal.
