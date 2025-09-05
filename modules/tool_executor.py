@@ -11,7 +11,7 @@ from security.security_dashboard import SecurityDashboard
 from modules.cloud_integration_services import CloudServicesManager
 from modules.pentesting_tools.pentesting_facade import PentestingFacade
 from modules.automation_tools import DesktopAutomator, WebAutomator
-from modules.system_monitor import SystemMonitorFacade
+from modules.system_monitor_module import SystemMonitorFacade
 from modules.mobile_integration_module import MobileFacade
 from modules.os_operations.universal_operations import UniversalOSOperator
 from modules.knowledge_retrieval.code_retriever import CodeRetriever
