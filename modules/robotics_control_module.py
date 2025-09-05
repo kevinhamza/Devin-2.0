@@ -488,6 +488,7 @@ from datetime import datetime, timezone
 from enum import Enum, auto
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Tuple
+from dataclasses import dataclass
 
 # ... (All enums and dataclasses like RobotCommandType, RobotCommand, etc. remain unchanged from the previous version)
 class RobotCommandType(Enum):
