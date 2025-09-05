@@ -224,6 +224,7 @@
 import logging
 import platform
 from typing import Optional, Any, List, Tuple
+import numpy as np
 
 # --- Platform-specific imports ---
 IS_MACOS = platform.system() == "Darwin"
