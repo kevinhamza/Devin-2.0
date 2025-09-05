@@ -45,4 +45,4 @@ reportlab
 tqdm # For progress bars
 webdriver-manager
 pyautogui
-
+ppad
