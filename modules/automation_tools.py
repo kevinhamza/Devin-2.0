@@ -459,7 +459,7 @@ class DesktopAutomator:
         return str(output_path)
 
 
-class BrowserAutomator:
+class WebAutomator:
     """Automates web browser interactions using 'Selenium'."""
     def __init__(self, browser_type: str = "chrome"):
         self.browser_type = browser_type
