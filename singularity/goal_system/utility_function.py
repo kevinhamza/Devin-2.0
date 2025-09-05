@@ -3,6 +3,7 @@
 #          formal utility function to evaluate and select the best plan of action.
 
 import logging
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
@@ -33,7 +34,7 @@ class EvaluationResult:
     """Holds the detailed results of a utility function evaluation."""
     total_utility: float
     component_scores: Dict[str, float] = field(default_factory=dict)
-    plan: 'Plan'
+    plan: Plan
 
 # --- Abstract Base Class for all Utility Components ---
 class UtilityComponent(ABC):
