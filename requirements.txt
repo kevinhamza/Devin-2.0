@@ -47,3 +47,4 @@ webdriver-manager
 pyautogui
 ppad
 pure-python-adb
+dataclasses
