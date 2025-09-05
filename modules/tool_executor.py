@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Callable
 # --- Import all tool-providing modules ---
 from modules.all_ais_modules import AIAgent
 from security.security_dashboard import SecurityDashboard
-from modules.cloud_services_manager import CloudServicesManager
+from modules.cloud_integration_services import CloudServicesManager
 from modules.pentesting_tools.pentesting_facade import PentestingFacade
 from modules.automation_tools import DesktopAutomator, WebAutomator
 from modules.system_monitor import SystemMonitorFacade
