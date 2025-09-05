@@ -46,7 +46,7 @@ class MemoryTracker:
         self._monitoring_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
 
-    def get_virtual_memory_usage(self) -> psutil._common.svmem:
+    def get_virtual_memory_usage(self) -> psutil.svmem:
         """Gets system-wide virtual memory (RAM) statistics."""
         return psutil.virtual_memory()
 
@@ -187,3 +187,4 @@ if __name__ == "__main__":
     print("\n=========================================================")
     print("=== Memory Tracking Prototype Complete ===")
     print("=========================================================")
+
