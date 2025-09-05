@@ -33,8 +33,8 @@ if not logger.handlers:
 class EvaluationResult:
     """Holds the detailed results of a utility function evaluation."""
     total_utility: float
-    component_scores: Dict[str, float] = field(default_factory=dict)
     plan: Plan
+    component_scores: Dict[str, float] = field(default_factory=dict)
 
 # --- Abstract Base Class for all Utility Components ---
 class UtilityComponent(ABC):
