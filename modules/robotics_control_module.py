@@ -500,8 +500,8 @@ class RobotCommandType(Enum):
 
 @dataclass
 class RobotCommand:
-    command_id: str = field(default_factory=lambda: f"rcmd_{uuid.uuid4().hex[:8]}")
     command_type: RobotCommandType
+    command_id: str = field(default_factory=lambda: f"rcmd_{uuid.uuid4().hex[:8]}")
     parameters: Dict[str, Any] = field(default_factory=dict)
 # ... other data classes are the same
 
