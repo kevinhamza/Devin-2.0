@@ -278,11 +278,11 @@ from typing import Dict, Any, Optional, NamedTuple, List
 
 try:
     # --- Import the REAL, integrated monitoring and robotics modules ---
+    from modules.robotics_control_module import RoboticsControlModule, RobotFeedback
     from modules.monitoring.cpu_usage import get_cpu_usage, get_process_info
     from modules.monitoring.memory_tracker import get_memory_info
     from modules.monitoring.disk_scanner import get_disk_usage
     from modules.monitoring.network_monitor import get_network_stats
-    from modules.robotics_control_module import RoboticsControlModule, RobotFeedback
     DEVIN_CORE_AVAILABLE = True
 except ImportError as e:
     DEVIN_CORE_AVAILABLE = False
