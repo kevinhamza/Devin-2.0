@@ -48,3 +48,4 @@ pyautogui
 ppad
 pure-python-adb
 dataclasses
+google-genai
