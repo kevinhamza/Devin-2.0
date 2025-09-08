@@ -145,16 +145,13 @@ class DevinAGI:
                 thread.start()
                 threads[name] = thread
                 logger.info(f"{name} Server started in background on port {config['port']}.")
+                return threads
             except Exception as e:
                 logger.error(f"Failed to start the {name} Server. This feature will be unavailable. Error: {e}")
                 args=("127.0.0.1", config["port"]),
                 daemon=True,
                 name=f"{name}ServerThread"
             )
-            thread.start()
-            threads[name] = thread
-            logger.info(f"{name} Server started in background on port {config['port']}.")
-        return threads
 
     def run(self):
         """The main operational loop of the AGI."""
