@@ -151,7 +151,6 @@ class DevinAGI:
                 args=("127.0.0.1", config["port"]),
                 daemon=True,
                 name=f"{name}ServerThread"
-            )
 
     def run(self):
         """The main operational loop of the AGI."""
