@@ -124,7 +124,6 @@ class DevinAGI:
 
     def _start_background_servers(self) -> Dict[str, threading.Thread]:
         """Initializes and starts all backend servers in daemon threads."""
-# NEW CODE
         servers_to_start = {
             "CloudIntegration": {"class": CloudIntegrationServer, "port": 5002},
             "Analytics": {"class": AnalyticsServer, "port": 5004, "args": ["analytics_db.feather"]},
@@ -133,11 +132,21 @@ class DevinAGI:
         }
         threads = {}
         for name, config in servers_to_start.items():
-            # Get the arguments, defaulting to an empty list
-            server_args = config.get("args", [])
-            server_instance = config["class"](*server_args) # Use * to pass the list as arguments
-            thread = threading.Thread(
-                target=server_instance.run,
+            try:
+        # Get the arguments, defaulting to an empty list
+                server_args = config.get("args", [])
+                server_instance = config["class"](*server_args) # Use * to pass the list as arguments
+                thread = threading.Thread(
+                    target=server_instance.run,
+                    args=("127.0.0.1", config["port"]),
+                    daemon=True,
+                    name=f"{name}ServerThread"
+                )
+                thread.start()
+                threads[name] = thread
+                logger.info(f"{name} Server started in background on port {config['port']}.")
+            except Exception as e:
+                logger.error(f"Failed to start the {name} Server. This feature will be unavailable. Error: {e}")
                 args=("127.0.0.1", config["port"]),
                 daemon=True,
                 name=f"{name}ServerThread"
