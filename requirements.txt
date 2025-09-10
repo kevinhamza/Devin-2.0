@@ -49,3 +49,53 @@ ppad
 pure-python-adb
 dataclasses
 google-genai
+
+
+
+# Devin AGI - Python Dependencies
+
+# --- Core & Servers ---
+flask
+requests
+python-dotenv
+numpy
+pandas
+pyarrow
+websockets
+
+# --- AI & Machine Learning ---
+openai
+google-generativeai
+scikit-learn
+torch
+torchvision
+torchaudio
+ultralytics # For YOLO object detection
+Pillow # For image manipulation
+tiktoken # For token counting
+sentence-transformers # For semantic code search
+
+# --- OS & Automation ---
+psutil # For system monitoring
+watchdog # For file system monitoring
+pynput # For keyboard/mouse control
+selenium # For web automation
+paramiko # For SSH
+boto3 # For AWS
+google-cloud-storage # For GCP
+google-cloud-compute # For GCP
+pywin32; sys_platform == 'win32' # Windows-specific API access
+
+# --- Robotics ---
+pyserial
+opencv-python
+
+# --- Threat Intelligence & Pentesting ---
+python-nmap
+beautifulsoup4
+
+# --- XR/Metaverse & Legal Docs ---
+reportlab
+
+# --- Other Utilities ---
+tqdm # For progress bars
