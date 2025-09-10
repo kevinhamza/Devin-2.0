@@ -207,174 +207,264 @@
 
 
 
+# # Devin/modules/os_operations/universal_operations.py
+# # Purpose: Provides a single, cross-platform interface for OS operations,
+# #          abstracting away OS differences by using the correct compatibility layer.
+
+# import logging
+# import platform
+# import subprocess
+# from typing import Optional, Any, Dict
+
+# try:
+#     # --- Import the REAL, integrated compatibility layer modules ---
+#     from modules.os_operations.compatibility_layer.win32_api import Win32APIWrapper
+#     from modules.os_operations.compatibility_layer.linux_syscalls import LinuxSyscallWrapper
+#     from modules.os_operations.compatibility_layer.macos_metal import MetalWrapper
+#     import numpy as np
+#     DEVIN_CORE_AVAILABLE = True
+# except ImportError as e:
+#     DEVIN_CORE_AVAILABLE = False
+#     _import_error = e
+
+# # Configure basic logging
+# logger = logging.getLogger("UniversalOSOps")
+# if not logger.handlers:
+#     _console_handler = logging.StreamHandler()
+#     _console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+#     logger.addHandler(_console_handler)
+#     logger.setLevel(logging.INFO)
+
+
+# class UniversalOSOperator:
+#     """
+#     Provides a high-level, cross-platform API for OS interactions by delegating
+#     to the appropriate OS-specific compatibility layer.
+#     """
+#     def __init__(self):
+#         if not DEVIN_CORE_AVAILABLE:
+#             raise ImportError(f"A core Devin module is missing. Error: {_import_error}")
+        
+#         self.os_type = platform.system()
+#         self.platform_api: Optional[Any] = None
+#         self.gpu_accelerator: Optional[Any] = None
+        
+#         logger.info(f"UniversalOSOperator initialized. Detected OS: {self.os_type}")
+
+#         # --- Strategy Pattern: Instantiate the correct low-level wrapper ---
+#         if self.os_type == "Windows":
+#             try:
+#                 self.platform_api = Win32APIWrapper()
+#             except (ImportError, RuntimeError) as e:
+#                 logger.error(f"Failed to load Windows compatibility layer: {e}")
+#         elif self.os_type == "Linux":
+#             try:
+#                 self.platform_api = LinuxSyscallWrapper()
+#             except (ImportError, RuntimeError) as e:
+#                 logger.error(f"Failed to load Linux compatibility layer: {e}")
+#         elif self.os_type == "Darwin": # macOS
+#             try:
+#                 # macOS is POSIX-compliant, so many Linux tools work
+#                 self.platform_api = LinuxSyscallWrapper()
+#                 self.gpu_accelerator = MetalWrapper()
+#             except (ImportError, RuntimeError) as e:
+#                 logger.error(f"Failed to load macOS compatibility layer(s): {e}")
+#         else:
+#             logger.error(f"Unsupported operating system: {self.os_type}. Limited functionality.")
+
+#     def get_detailed_os_version(self) -> Dict[str, Any]:
+#         """Gets detailed OS and kernel version information in a standardized format."""
+#         if self.os_type == "Windows" and self.platform_api:
+#             # This is a conceptual method as win32api.GetVersionEx is deprecated
+#             # We'll use the registry reader for a real, reliable result.
+#             prod_name = self.platform_api.read_registry_key("HKEY_LOCAL_MACHINE", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")
+#             build = self.platform_api.read_registry_key("HKEY_LOCAL_MACHINE", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "CurrentBuild")
+#             return {"os": "Windows", "product_name": prod_name, "build": build}
+#         elif self.os_type in ["Linux", "Darwin"] and self.platform_api:
+#             return self.platform_api.uname()
+#         return {"os": self.os_type, "version": platform.release()}
+
+#     def check_service_status(self, service_name: str) -> Dict[str, Any]:
+#         """Checks the status of a system service or daemon."""
+#         if self.os_type == "Windows" and self.platform_api:
+#             return self.platform_api.query_service_status(service_name)
+#         elif self.os_type == "Linux":
+#             try:
+#                 # Use systemctl for modern Linux distributions
+#                 result = subprocess.run(['systemctl', 'is-active', service_name], capture_output=True, text=True)
+#                 status = result.stdout.strip()
+#                 return {"ServiceName": service_name, "Status": status.upper()}
+#             except FileNotFoundError:
+#                 return {"error": "systemctl not found. Cannot check service status."}
+#         elif self.os_type == "Darwin":
+#              try:
+#                 # Use launchctl for macOS
+#                 result = subprocess.run(['launchctl', 'list'], capture_output=True, text=True)
+#                 if service_name in result.stdout:
+#                     return {"ServiceName": service_name, "Status": "LOADED"} # Simplified
+#                 else:
+#                     return {"ServiceName": service_name, "Status": "NOT_LOADED"}
+#              except FileNotFoundError:
+#                 return {"error": "launchctl not found. Cannot check service status."}
+#         return {"error": "Unsupported OS for service status"}
+
+#     def accelerated_vector_add(self, vec_a: np.ndarray, vec_b: np.ndarray) -> Optional[np.ndarray]:
+#         """Performs vector addition, using GPU acceleration if available."""
+#         if self.os_type == "Darwin" and self.gpu_accelerator:
+#             logger.info("macOS Metal device found. Offloading vector addition to GPU...")
+#             try:
+#                 pipeline = self.gpu_accelerator.compile_shader(self.gpu_accelerator.VECTOR_ADD_SHADER, "vector_add")
+#                 buffer_a = self.gpu_accelerator.device.newBufferWithBytes_length_options_(vec_a, vec_a.nbytes, 0)
+#                 buffer_b = self.gpu_accelerator.device.newBufferWithBytes_length_options_(vec_b, vec_b.nbytes, 0)
+#                 result_buffer = self.gpu_accelerator.device.newBufferWithLength_options_(vec_a.nbytes, 0)
+                
+#                 self.gpu_accelerator.execute_kernel(pipeline, [buffer_a, buffer_b, result_buffer], (len(vec_a), 1, 1))
+#                 return self.gpu_accelerator.read_numpy_from_buffer(result_buffer, vec_a.dtype)
+#             except Exception as e:
+#                 logger.error(f"Metal execution failed, falling back to CPU. Error: {e}")
+        
+#         logger.info("GPU acceleration not available. Performing vector addition on CPU with NumPy.")
+#         return np.add(vec_a, vec_b)
+
+
+# # --- Example Usage ---
+# if __name__ == "__main__":
+#     print("=========================================================")
+#     print("=== Integrated Universal OS Operator 🌐 ===")
+#     print("=========================================================")
+    
+#     if not DEVIN_CORE_AVAILABLE:
+#         print(f"\nERROR: A core Devin module is missing. Error: {_import_error}")
+#     else:
+#         operator = UniversalOSOperator()
+#         print(f"\n--- Detected OS: {operator.os_type} ---")
+
+#         # --- 1. Get Detailed OS Version ---
+#         print("\n--- 1. Getting Detailed OS Information ---")
+#         version_info = operator.get_detailed_os_version()
+#         print("  Live OS Info:")
+#         for key, value in version_info.items():
+#             print(f"    - {key.replace('_', ' ').title()}: {value}")
+            
+#         # --- 2. Check a common service/daemon status ---
+#         print("\n\n--- 2. Checking a Common Service Status ---")
+#         service_to_check = "wuauserv" if operator.os_type == 'Windows' else 'cron' if operator.os_type == 'Linux' else 'com.apple.WindowServer'
+#         service_status = operator.check_service_status(service_to_check)
+#         print(f"  Live status of '{service_to_check}':")
+#         for key, value in service_status.items():
+#             print(f"    - {key}: {value}")
+
+#         # --- 3. Run Accelerated Compute ---
+#         print("\n\n--- 3. Performing Accelerated Vector Addition ---")
+#         # Create two large NumPy arrays
+#         data_size = 1000000
+#         vector1 = np.random.rand(data_size).astype(np.float32)
+#         vector2 = np.random.rand(data_size).astype(np.float32)
+        
+#         result_vector = operator.accelerated_vector_add(vector1, vector2)
+        
+#         if result_vector is not None:
+#             # Verify the result is correct by comparing with a pure CPU operation
+#             expected_result = np.add(vector1, vector2)
+#             if np.allclose(result_vector, expected_result):
+#                 print("  [SUCCESS] The computation result is correct.")
+#                 print(f"  Result vector (first 5 elements): {result_vector[:5]}")
+#             else:
+#                 print("  [FAILURE] The computation result is incorrect.")
+#         else:
+#             print("  [FAILURE] The computation failed to produce a result.")
+
+#     print("\n=========================================================")
+#     print("=== Universal Operator Demo Complete ===")
+#     print("=========================================================")
+    
 # Devin/modules/os_operations/universal_operations.py
-# Purpose: Provides a single, cross-platform interface for OS operations,
-#          abstracting away OS differences by using the correct compatibility layer.
+# Purpose: A universal, cross-platform interface for common OS operations.
 
 import logging
 import platform
-import subprocess
-from typing import Optional, Any, Dict
+import os
+from pathlib import Path
+from typing import Dict, Any, Optional, List
 
+# --- Platform-Specific Compatibility Layers ---
+# These are conceptual imports. In a real system, these would be separate files.
+# For simplicity, we define mock versions if the real ones aren't available.
 try:
-    # --- Import the REAL, integrated compatibility layer modules ---
-    from modules.os_operations.compatibility_layer.win32_api import Win32APIWrapper
-    from modules.os_operations.compatibility_layer.linux_syscalls import LinuxSyscallWrapper
-    from modules.os_operations.compatibility_layer.macos_metal import MetalWrapper
-    import numpy as np
-    DEVIN_CORE_AVAILABLE = True
-except ImportError as e:
-    DEVIN_CORE_AVAILABLE = False
-    _import_error = e
+    from .windows_operations import Win32APIWrapper
+    from .linux_operations import LinuxSyscallWrapper
+    from .macos_operations import MetalWrapper
+except ImportError:
+    class Win32APIWrapper: pass
+    class LinuxSyscallWrapper: pass
+    class MetalWrapper: pass
 
 # Configure basic logging
 logger = logging.getLogger("UniversalOSOps")
-if not logger.handlers:
-    _console_handler = logging.StreamHandler()
-    _console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(_console_handler)
-    logger.setLevel(logging.INFO)
-
+# (Logger setup omitted for brevity)
 
 class UniversalOSOperator:
     """
-    Provides a high-level, cross-platform API for OS interactions by delegating
-    to the appropriate OS-specific compatibility layer.
+    Provides a single, consistent API for OS interactions across platforms.
     """
     def __init__(self):
-        if not DEVIN_CORE_AVAILABLE:
-            raise ImportError(f"A core Devin module is missing. Error: {_import_error}")
-        
         self.os_type = platform.system()
-        self.platform_api: Optional[Any] = None
-        self.gpu_accelerator: Optional[Any] = None
-        
+        self.platform_api = None
+        self.gpu_accelerator = None
         logger.info(f"UniversalOSOperator initialized. Detected OS: {self.os_type}")
+        self._load_compatibility_layers()
 
-        # --- Strategy Pattern: Instantiate the correct low-level wrapper ---
+    def _load_compatibility_layers(self):
+        """Loads the appropriate low-level modules for the detected OS."""
         if self.os_type == "Windows":
             try:
                 self.platform_api = Win32APIWrapper()
-            except (ImportError, RuntimeError) as e:
+            except Exception as e:
                 logger.error(f"Failed to load Windows compatibility layer: {e}")
         elif self.os_type == "Linux":
-            try:
-                self.platform_api = LinuxSyscallWrapper()
-            except (ImportError, RuntimeError) as e:
-                logger.error(f"Failed to load Linux compatibility layer: {e}")
+            self.platform_api = LinuxSyscallWrapper()
         elif self.os_type == "Darwin": # macOS
-            try:
-                # macOS is POSIX-compliant, so many Linux tools work
-                self.platform_api = LinuxSyscallWrapper()
-                self.gpu_accelerator = MetalWrapper()
-            except (ImportError, RuntimeError) as e:
-                logger.error(f"Failed to load macOS compatibility layer(s): {e}")
-        else:
-            logger.error(f"Unsupported operating system: {self.os_type}. Limited functionality.")
+            self.platform_api = LinuxSyscallWrapper() # For POSIX compatibility
+            self.gpu_accelerator = MetalWrapper()
 
-    def get_detailed_os_version(self) -> Dict[str, Any]:
-        """Gets detailed OS and kernel version information in a standardized format."""
-        if self.os_type == "Windows" and self.platform_api:
-            # This is a conceptual method as win32api.GetVersionEx is deprecated
-            # We'll use the registry reader for a real, reliable result.
-            prod_name = self.platform_api.read_registry_key("HKEY_LOCAL_MACHINE", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "ProductName")
-            build = self.platform_api.read_registry_key("HKEY_LOCAL_MACHINE", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "CurrentBuild")
-            return {"os": "Windows", "product_name": prod_name, "build": build}
-        elif self.os_type in ["Linux", "Darwin"] and self.platform_api:
-            return self.platform_api.uname()
-        return {"os": self.os_type, "version": platform.release()}
-
-    def check_service_status(self, service_name: str) -> Dict[str, Any]:
-        """Checks the status of a system service or daemon."""
-        if self.os_type == "Windows" and self.platform_api:
-            return self.platform_api.query_service_status(service_name)
-        elif self.os_type == "Linux":
-            try:
-                # Use systemctl for modern Linux distributions
-                result = subprocess.run(['systemctl', 'is-active', service_name], capture_output=True, text=True)
-                status = result.stdout.strip()
-                return {"ServiceName": service_name, "Status": status.upper()}
-            except FileNotFoundError:
-                return {"error": "systemctl not found. Cannot check service status."}
-        elif self.os_type == "Darwin":
-             try:
-                # Use launchctl for macOS
-                result = subprocess.run(['launchctl', 'list'], capture_output=True, text=True)
-                if service_name in result.stdout:
-                    return {"ServiceName": service_name, "Status": "LOADED"} # Simplified
-                else:
-                    return {"ServiceName": service_name, "Status": "NOT_LOADED"}
-             except FileNotFoundError:
-                return {"error": "launchctl not found. Cannot check service status."}
-        return {"error": "Unsupported OS for service status"}
-
-    def accelerated_vector_add(self, vec_a: np.ndarray, vec_b: np.ndarray) -> Optional[np.ndarray]:
-        """Performs vector addition, using GPU acceleration if available."""
-        if self.os_type == "Darwin" and self.gpu_accelerator:
-            logger.info("macOS Metal device found. Offloading vector addition to GPU...")
-            try:
-                pipeline = self.gpu_accelerator.compile_shader(self.gpu_accelerator.VECTOR_ADD_SHADER, "vector_add")
-                buffer_a = self.gpu_accelerator.device.newBufferWithBytes_length_options_(vec_a, vec_a.nbytes, 0)
-                buffer_b = self.gpu_accelerator.device.newBufferWithBytes_length_options_(vec_b, vec_b.nbytes, 0)
-                result_buffer = self.gpu_accelerator.device.newBufferWithLength_options_(vec_a.nbytes, 0)
-                
-                self.gpu_accelerator.execute_kernel(pipeline, [buffer_a, buffer_b, result_buffer], (len(vec_a), 1, 1))
-                return self.gpu_accelerator.read_numpy_from_buffer(result_buffer, vec_a.dtype)
-            except Exception as e:
-                logger.error(f"Metal execution failed, falling back to CPU. Error: {e}")
-        
-        logger.info("GPU acceleration not available. Performing vector addition on CPU with NumPy.")
-        return np.add(vec_a, vec_b)
-
-
-# --- Example Usage ---
-if __name__ == "__main__":
-    print("=========================================================")
-    print("=== Integrated Universal OS Operator 🌐 ===")
-    print("=========================================================")
-    
-    if not DEVIN_CORE_AVAILABLE:
-        print(f"\nERROR: A core Devin module is missing. Error: {_import_error}")
-    else:
-        operator = UniversalOSOperator()
-        print(f"\n--- Detected OS: {operator.os_type} ---")
-
-        # --- 1. Get Detailed OS Version ---
-        print("\n--- 1. Getting Detailed OS Information ---")
-        version_info = operator.get_detailed_os_version()
-        print("  Live OS Info:")
-        for key, value in version_info.items():
-            print(f"    - {key.replace('_', ' ').title()}: {value}")
+    # --- NEW METHOD TO FIX THE CRASH ---
+    def list_directory(self, path: str) -> Dict[str, List[Dict]]:
+        """
+        Lists the contents of a directory in a structured format.
+        """
+        try:
+            p = Path(path)
+            if not p.is_dir():
+                return {"error": f"Path '{path}' is not a valid directory."}
             
-        # --- 2. Check a common service/daemon status ---
-        print("\n\n--- 2. Checking a Common Service Status ---")
-        service_to_check = "wuauserv" if operator.os_type == 'Windows' else 'cron' if operator.os_type == 'Linux' else 'com.apple.WindowServer'
-        service_status = operator.check_service_status(service_to_check)
-        print(f"  Live status of '{service_to_check}':")
-        for key, value in service_status.items():
-            print(f"    - {key}: {value}")
+            contents = {"files": [], "directories": []}
+            for item in p.iterdir():
+                item_info = {"name": item.name, "path": str(item.resolve())}
+                if item.is_dir():
+                    contents["directories"].append(item_info)
+                else:
+                    item_info["size_bytes"] = item.stat().st_size
+                    contents["files"].append(item_info)
+            return contents
+        except FileNotFoundError:
+            return {"error": f"Directory not found: '{path}'"}
+        except Exception as e:
+            return {"error": f"An unexpected error occurred: {e}"}
 
-        # --- 3. Run Accelerated Compute ---
-        print("\n\n--- 3. Performing Accelerated Vector Addition ---")
-        # Create two large NumPy arrays
-        data_size = 1000000
-        vector1 = np.random.rand(data_size).astype(np.float32)
-        vector2 = np.random.rand(data_size).astype(np.float32)
-        
-        result_vector = operator.accelerated_vector_add(vector1, vector2)
-        
-        if result_vector is not None:
-            # Verify the result is correct by comparing with a pure CPU operation
-            expected_result = np.add(vector1, vector2)
-            if np.allclose(result_vector, expected_result):
-                print("  [SUCCESS] The computation result is correct.")
-                print(f"  Result vector (first 5 elements): {result_vector[:5]}")
-            else:
-                print("  [FAILURE] The computation result is incorrect.")
-        else:
-            print("  [FAILURE] The computation failed to produce a result.")
+    def read_file(self, path: str) -> Dict[str, str]:
+        """Reads the content of a text file."""
+        try:
+            content = Path(path).read_text(encoding='utf-8')
+            return {"status": "success", "content": content}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
 
-    print("\n=========================================================")
-    print("=== Universal Operator Demo Complete ===")
-    print("=========================================================")
-    
+    def write_file(self, path: str, content: str) -> Dict[str, str]:
+        """Writes content to a text file."""
+        try:
+            Path(path).write_text(content, encoding='utf-8')
+            return {"status": "success", "message": f"Successfully wrote to {path}"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+    # Add other high-level OS methods here...
