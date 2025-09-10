@@ -38,7 +38,8 @@ from modules.user_interaction_module import UserInteractionManager
 from security.security_dashboard import SecurityDashboard
 
 # Tool-Providing Facades and Managers
-from modules.cloud_integration_services import CloudServicesManager
+# from modules.cloud_integration_services import CloudServicesManager
+from modules.cloud_services_manager import CloudServicesManager
 from modules.cloud_integration_module import CloudFacade
 from modules.pentesting_tools.pentesting_facade import PentestingFacade
 from modules.automation_tools import DesktopAutomator, WebAutomator
