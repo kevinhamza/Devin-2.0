@@ -323,11 +323,17 @@ else:
     try: from geometry_msgs.msg import Twist as ActualTwist; CONCEPTUAL_MSG_TYPE_MAP["geometry_msgs/msg/Twist"] = ActualTwist; Twist = ActualTwist
     except ImportError: if not RCLPY_AVAILABLE: Twist = Twist # Keep placeholder
     try: from geometry_msgs.msg import PoseStamped as ActualPoseStamped; CONCEPTUAL_MSG_TYPE_MAP["geometry_msgs/msg/PoseStamped"] = ActualPoseStamped; PoseStamped = ActualPoseStamped
-    except ImportError: if not RCLPY_AVAILABLE: PoseStamped = PoseStamped
+    except ImportError:
+        if not RCLPY_AVAILABLE:
+            PoseStamped = PoseStamped
     try: from sensor_msgs.msg import LaserScan as ActualLaserScan; CONCEPTUAL_MSG_TYPE_MAP["sensor_msgs/msg/LaserScan"] = ActualLaserScan; LaserScan = ActualLaserScan
-    except ImportError: if not RCLPY_AVAILABLE: LaserScan = LaserScan
+    except ImportError:
+        if not RCLPY_AVAILABLE:
+            LaserScan = LaserScan
     try: from std_srvs.srv import Trigger as ActualTrigger; CONCEPTUAL_MSG_TYPE_MAP["std_srvs/srv/Trigger"] = ActualTrigger; Trigger = ActualTrigger
-    except ImportError: if not RCLPY_AVAILABLE: Trigger = Trigger
+    except ImportError:
+        if not RCLPY_AVAILABLE:
+            Trigger = Trigger
     # Add more mappings for actions etc. as needed by examples
 
 
