@@ -472,7 +472,7 @@ class CodeExecutionPrototype:
             return result
 
 
-    def (self,
+    def execute_shell_command(self,
         command_str: str,
         shell_type: Literal['bash', 'sh', 'powershell', 'cmd'] = 'bash',
         timeout: Optional[int] = None,
