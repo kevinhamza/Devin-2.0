@@ -401,26 +401,201 @@
 #     print("================================================================")
 
 
+# # Devin/modules/automation_tools.py
+# # Purpose: Provides a "toolbox" of live-fire functions for automating
+# #          desktop, browser, file system, and other computer interactions.
+
+# import logging
+# import time
+# import os
+# import shutil
+# import glob
+# import subprocess
+# from pathlib import Path
+# from typing import List, Optional, Tuple
+
+# try:
+#     import pyautogui
+#     import psutil
+#     from selenium import webdriver
+#     from selenium.webdriver.common.by import By
+#     from selenium.webdriver.chrome.service import Service as ChromeService
+#     from webdriver_manager.chrome import ChromeDriverManager
+#     DEPS_AVAILABLE = True
+# except ImportError as e:
+#     DEPS_AVAILABLE = False
+#     _import_error = e
+
+# # Configure basic logging
+# logger = logging.getLogger("AutomationTools")
+# if not logger.handlers:
+#     _console_handler = logging.StreamHandler()
+#     _console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+#     logger.addHandler(_console_handler)
+#     logger.setLevel(logging.INFO)
+
+
+# class DesktopAutomator:
+#     """Automates desktop GUI interactions using 'pyautogui'."""
+#     def __init__(self, output_dir: str = "devin_desktop_captures"):
+#         self.output_dir = Path(output_dir)
+#         self.output_dir.mkdir(parents=True, exist_ok=True)
+#         self.screen_width, self.screen_height = pyautogui.size()
+#         logger.info(f"DesktopAutomator initialized. Screen size: {self.screen_width}x{self.screen_height}.")
+
+#     def move_mouse_to(self, x: int, y: int, duration_sec: float = 0.5):
+#         pyautogui.moveTo(x, y, duration=duration_sec, tween=pyautogui.easeInOutQuad)
+
+#     def mouse_click(self, button: str = 'left', clicks: int = 1, interval_sec: float = 0.1):
+#         pyautogui.click(button=button, clicks=clicks, interval=interval_sec)
+
+#     def type_text(self, text: str, interval_chars_sec: float = 0.05):
+#         pyautogui.write(text, interval=interval_chars_sec)
+
+#     def take_screenshot(self) -> str:
+#         output_path = self.output_dir / f"screenshot_{time.strftime('%Y%m%d_%H%M%S')}.png"
+#         pyautogui.screenshot(str(output_path))
+#         logger.info(f"Screenshot saved to '{output_path}'")
+#         return str(output_path)
+
+
+# class WebAutomator:
+#     """Automates web browser interactions using 'Selenium'."""
+#     def __init__(self, browser_type: str = "chrome"):
+#         self.browser_type = browser_type
+#         self.driver: Optional[webdriver.Chrome] = None
+
+#     def open_browser(self, headless: bool = True):
+#         logger.info(f"Initializing '{self.browser_type}' driver (headless={headless})...")
+#         options = webdriver.ChromeOptions()
+#         if headless:
+#             options.add_argument("--headless")
+#         self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+#         logger.info("Browser opened successfully.")
+
+#     def close_browser(self):
+#         if self.driver:
+#             self.driver.quit()
+#             self.driver = None
+#             logger.info("Browser closed.")
+
+#     def navigate_to_url(self, url: str):
+#         if not self.driver: raise ConnectionError("Browser is not open.")
+#         self.driver.get(url)
+#         logger.info(f"Navigated to URL: {url}")
+
+#     def find_element_and_click(self, by: By, value: str):
+#         if not self.driver: raise ConnectionError("Browser is not open.")
+#         element = self.driver.find_element(by, value)
+#         element.click()
+#         logger.info(f"Clicked element found by {by}='{value}'")
+
+
+# class FileSystemAutomator:
+#     """Automates file system operations."""
+#     def find_files(self, start_path: str, name_pattern: str) -> List[str]:
+#         return glob.glob(f'{start_path}/**/{name_pattern}', recursive=True)
+    
+#     def move_file(self, source_path: str, destination_path: str):
+#         shutil.move(source_path, destination_path)
+#         logger.info(f"Moved file from '{source_path}' to '{destination_path}'.")
+
+
+# class ProcessManager:
+#     """Manages system processes using 'subprocess' and 'psutil'."""
+#     def start_process(self, command: List[str]) -> psutil.Process:
+#         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         p = psutil.Process(proc.pid)
+#         logger.info(f"Started process '{' '.join(command)}' with PID: {p.pid}")
+#         return p
+
+#     def terminate_process(self, pid: int):
+#         try:
+#             p = psutil.Process(pid)
+#             p.terminate()
+#             logger.info(f"Terminated process with PID: {pid}")
+#         except psutil.NoSuchProcess:
+#             logger.warning(f"Process with PID {pid} not found. May have already terminated.")
+
+# # --- Example Usage Tying All Tools Together ---
+# if __name__ == "__main__":
+#     print("=========================================================")
+#     print("=== Integrated Automation Tools Prototype 🤖🖱️ ===")
+#     print("=========================================================")
+
+#     if not DEPS_AVAILABLE:
+#         print(f"\nERROR: A core dependency is missing. Please run 'pip install pyautogui selenium psutil webdriver-manager'.")
+#         print(f"Import Error: {_import_error}")
+#     else:
+#         # 1. Initialize all automation tools
+#         desktop = DesktopAutomator()
+#         browser = BrowserAutomator()
+#         file_system = FileSystemAutomator()
+#         process_manager = ProcessManager()
+#         server_process = None
+
+#         print("--- Starting a complex automation workflow ---")
+#         try:
+#             # 2. Start a local web server as a background process
+#             print("\n[Step 1] Starting a local Python web server...")
+#             server_process = process_manager.start_process(["python", "-m", "http.server", "8000"])
+#             time.sleep(2) # Give server time to start up
+
+#             # 3. Open a browser and navigate to the local server
+#             print("\n[Step 2] Opening a headless browser to interact with the server...")
+#             browser.open_browser(headless=True)
+#             browser.navigate_to_url("http://localhost:8000")
+            
+#             # 4. Use desktop automation to take a screenshot of the whole screen
+#             print("\n[Step 3] Taking a screenshot of the desktop...")
+#             screenshot_path_str = desktop.take_screenshot()
+            
+#             # 5. Use file system automation to move the screenshot
+#             print("\n[Step 4] Moving the screenshot to a new directory...")
+#             archive_dir = Path("./automation_archive")
+#             archive_dir.mkdir(exist_ok=True)
+#             screenshot_path = Path(screenshot_path_str)
+#             file_system.move_file(str(screenshot_path), str(archive_dir / screenshot_path.name))
+
+#         except Exception as e:
+#             logger.error(f"An error occurred during the automation workflow: {e}", exc_info=True)
+#         finally:
+#             # 6. Clean up: close the browser and terminate the server process
+#             print("\n[Step 5] Cleaning up resources...")
+#             browser.close_browser()
+#             if server_process:
+#                 process_manager.terminate_process(server_process.pid)
+            
+#             print("\n--- Automation workflow complete! ---")
+            
+#     print("\n=========================================================")
+#     print("=== Automation Tools Prototype Complete ===")
+#     print("=========================================================")
+
+
+
+
+
+
 # Devin/modules/automation_tools.py
-# Purpose: Provides a "toolbox" of live-fire functions for automating
-#          desktop, browser, file system, and other computer interactions.
+# Purpose: A comprehensive suite of tools for high-level automation of
+#          desktop GUI applications and web browsers.
 
 import logging
 import time
-import os
-import shutil
-import glob
-import subprocess
+import platform
+from typing import Optional, List, Tuple
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 try:
-    import pyautogui
-    import psutil
     from selenium import webdriver
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.chrome.service import Service as ChromeService
-    from webdriver_manager.chrome import ChromeDriverManager
+    from selenium.webdriver.remote.webelement import WebElement
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+    from pynput.keyboard import Key, Controller as KeyboardController
+    from pynput.mouse import Button, Controller as MouseController
+    import pyautogui
     DEPS_AVAILABLE = True
 except ImportError as e:
     DEPS_AVAILABLE = False
@@ -428,146 +603,180 @@ except ImportError as e:
 
 # Configure basic logging
 logger = logging.getLogger("AutomationTools")
-if not logger.handlers:
-    _console_handler = logging.StreamHandler()
-    _console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(_console_handler)
-    logger.setLevel(logging.INFO)
+# (Logger setup omitted for brevity)
 
 
-class DesktopAutomator:
-    """Automates desktop GUI interactions using 'pyautogui'."""
-    def __init__(self, output_dir: str = "devin_desktop_captures"):
-        self.output_dir = Path(output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.screen_width, self.screen_height = pyautogui.size()
-        logger.info(f"DesktopAutomator initialized. Screen size: {self.screen_width}x{self.screen_height}.")
+class KeyboardMouseController:
+    """Low-level wrapper for pynput keyboard and mouse control."""
+    def __init__(self):
+        self.keyboard = KeyboardController()
+        self.mouse = MouseController()
+    
+    def type_string(self, text: str, interval_secs: float = 0.01):
+        """Types a string with a small delay between characters."""
+        for char in text:
+            self.keyboard.type(char)
+            time.sleep(interval_secs)
 
-    def move_mouse_to(self, x: int, y: int, duration_sec: float = 0.5):
-        pyautogui.moveTo(x, y, duration=duration_sec, tween=pyautogui.easeInOutQuad)
+    def press_key(self, key_name: str):
+        key = getattr(Key, key_name, key_name)
+        self.keyboard.press(key)
 
-    def mouse_click(self, button: str = 'left', clicks: int = 1, interval_sec: float = 0.1):
-        pyautogui.click(button=button, clicks=clicks, interval=interval_sec)
+    def release_key(self, key_name: str):
+        key = getattr(Key, key_name, key_name)
+        self.keyboard.release(key)
+        
+    def hotkey(self, *key_names):
+        """Presses and releases a combination of keys (e.g., for shortcuts)."""
+        keys = [getattr(Key, k, k) for k in key_names]
+        for k in keys:
+            self.keyboard.press(k)
+        for k in reversed(keys):
+            self.keyboard.release(k)
 
-    def type_text(self, text: str, interval_chars_sec: float = 0.05):
-        pyautogui.write(text, interval=interval_chars_sec)
+    def move_mouse(self, x: int, y: int, duration: float = 0.2):
+        """Moves the mouse to the specified screen coordinates."""
+        pyautogui.moveTo(x, y, duration=duration)
 
-    def take_screenshot(self) -> str:
-        output_path = self.output_dir / f"screenshot_{time.strftime('%Y%m%d_%H%M%S')}.png"
-        pyautogui.screenshot(str(output_path))
-        logger.info(f"Screenshot saved to '{output_path}'")
-        return str(output_path)
+    def click(self, button: str = 'left'):
+        """Performs a mouse click."""
+        btn = Button.left if button == 'left' else Button.right
+        self.mouse.click(btn, 1)
 
 
-class WebAutomator:
-    """Automates web browser interactions using 'Selenium'."""
-    def __init__(self, browser_type: str = "chrome"):
+class BrowserManager:
+    """Manages the lifecycle of a Selenium WebDriver instance."""
+    def __init__(self, browser_type: str = 'chrome'):
+        if not DEPS_AVAILABLE:
+            raise ImportError(f"Selenium/PyAutoGUI/pynput is required. {_import_error}")
+        self.driver: Optional[webdriver.Remote] = None
         self.browser_type = browser_type
-        self.driver: Optional[webdriver.Chrome] = None
 
-    def open_browser(self, headless: bool = True):
-        logger.info(f"Initializing '{self.browser_type}' driver (headless={headless})...")
-        options = webdriver.ChromeOptions()
-        if headless:
-            options.add_argument("--headless")
-        self.driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
-        logger.info("Browser opened successfully.")
+    def open_browser(self):
+        if self.driver is None:
+            logger.info(f"Opening {self.browser_type} browser...")
+            # Add options for other browsers here
+            if self.browser_type == 'chrome':
+                self.driver = webdriver.Chrome()
+            elif self.browser_type == 'firefox':
+                self.driver = webdriver.Firefox()
+            self.driver.maximize_window()
+    
+    def get_driver(self) -> webdriver.Remote:
+        if self.driver is None:
+            self.open_browser()
+        return self.driver
 
     def close_browser(self):
         if self.driver:
+            logger.info("Closing browser.")
             self.driver.quit()
             self.driver = None
-            logger.info("Browser closed.")
+
+
+class DesktopAutomator:
+    """High-level facade for controlling the desktop environment."""
+    def __init__(self):
+        if not DEPS_AVAILABLE:
+            raise ImportError(f"PyAutoGUI/pynput is required. {_import_error}")
+        self.kbm = KeyboardMouseController()
+        self.screen_width, self.screen_height = pyautogui.size()
+        logger.info(f"DesktopAutomator initialized. Screen size: {self.screen_width}x{self.screen_height}.")
+
+    def open_application(self, app_name: str):
+        """Opens an application using the OS-native 'Run' or 'Spotlight' dialog."""
+        logger.info(f"Opening application: '{app_name}'")
+        sys_platform = platform.system()
+        if sys_platform == "Windows":
+            self.kbm.hotkey(Key.cmd, 'r') # Windows Key + R
+        elif sys_platform == "Darwin": # macOS
+            self.kbm.hotkey(Key.cmd, 'space') # Command + Space for Spotlight
+        else: # Linux
+            self.kbm.hotkey(Key.alt, Key.f2) # Alt+F2 is common for Run dialogs
+        
+        time.sleep(0.5)
+        self.kbm.type_string(app_name)
+        time.sleep(0.2)
+        self.kbm.press_key('enter')
+        self.kbm.release_key('enter')
+
+    def take_screenshot(self, output_path: str, region: Optional[Tuple[int, int, int, int]] = None) -> str:
+        """Takes a screenshot of the entire screen or a specific region."""
+        filepath = Path(output_path)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        pyautogui.screenshot(str(filepath), region=region)
+        logger.info(f"Screenshot saved to {filepath.resolve()}")
+        return str(filepath.resolve())
+
+    def find_and_click_image(self, image_path: str, confidence: float = 0.9) -> bool:
+        """Finds an image on the screen and clicks on its center."""
+        try:
+            location = pyautogui.locateCenterOnScreen(image_path, confidence=confidence)
+            if location:
+                logger.info(f"Found image '{image_path}' on screen at {location}. Clicking.")
+                self.kbm.move_mouse(location.x, location.y)
+                self.kbm.click()
+                return True
+            else:
+                logger.warning(f"Image '{image_path}' not found on screen.")
+                return False
+        except Exception as e:
+            logger.error(f"Error during image search for '{image_path}': {e}")
+            return False
+
+
+class WebAutomator:
+    """High-level facade for controlling a web browser."""
+    def __init__(self, browser_manager: Optional[BrowserManager] = None):
+        self.browser = browser_manager or BrowserManager()
 
     def navigate_to_url(self, url: str):
-        if not self.driver: raise ConnectionError("Browser is not open.")
-        self.driver.get(url)
-        logger.info(f"Navigated to URL: {url}")
+        """Navigates the browser to a specific URL."""
+        driver = self.browser.get_driver()
+        driver.get(url)
+        return {"status": "success", "message": f"Navigated to {url}"}
 
-    def find_element_and_click(self, by: By, value: str):
-        if not self.driver: raise ConnectionError("Browser is not open.")
-        element = self.driver.find_element(by, value)
-        element.click()
-        logger.info(f"Clicked element found by {by}='{value}'")
-
-
-class FileSystemAutomator:
-    """Automates file system operations."""
-    def find_files(self, start_path: str, name_pattern: str) -> List[str]:
-        return glob.glob(f'{start_path}/**/{name_pattern}', recursive=True)
-    
-    def move_file(self, source_path: str, destination_path: str):
-        shutil.move(source_path, destination_path)
-        logger.info(f"Moved file from '{source_path}' to '{destination_path}'.")
-
-
-class ProcessManager:
-    """Manages system processes using 'subprocess' and 'psutil'."""
-    def start_process(self, command: List[str]) -> psutil.Process:
-        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        p = psutil.Process(proc.pid)
-        logger.info(f"Started process '{' '.join(command)}' with PID: {p.pid}")
-        return p
-
-    def terminate_process(self, pid: int):
+    def scrape_visible_text(self) -> str:
+        """Scrapes all the visible text content from the current web page."""
+        logger.info("Scraping visible text from the current page...")
         try:
-            p = psutil.Process(pid)
-            p.terminate()
-            logger.info(f"Terminated process with PID: {pid}")
-        except psutil.NoSuchProcess:
-            logger.warning(f"Process with PID {pid} not found. May have already terminated.")
-
-# --- Example Usage Tying All Tools Together ---
-if __name__ == "__main__":
-    print("=========================================================")
-    print("=== Integrated Automation Tools Prototype 🤖🖱️ ===")
-    print("=========================================================")
-
-    if not DEPS_AVAILABLE:
-        print(f"\nERROR: A core dependency is missing. Please run 'pip install pyautogui selenium psutil webdriver-manager'.")
-        print(f"Import Error: {_import_error}")
-    else:
-        # 1. Initialize all automation tools
-        desktop = DesktopAutomator()
-        browser = BrowserAutomator()
-        file_system = FileSystemAutomator()
-        process_manager = ProcessManager()
-        server_process = None
-
-        print("--- Starting a complex automation workflow ---")
-        try:
-            # 2. Start a local web server as a background process
-            print("\n[Step 1] Starting a local Python web server...")
-            server_process = process_manager.start_process(["python", "-m", "http.server", "8000"])
-            time.sleep(2) # Give server time to start up
-
-            # 3. Open a browser and navigate to the local server
-            print("\n[Step 2] Opening a headless browser to interact with the server...")
-            browser.open_browser(headless=True)
-            browser.navigate_to_url("http://localhost:8000")
-            
-            # 4. Use desktop automation to take a screenshot of the whole screen
-            print("\n[Step 3] Taking a screenshot of the desktop...")
-            screenshot_path_str = desktop.take_screenshot()
-            
-            # 5. Use file system automation to move the screenshot
-            print("\n[Step 4] Moving the screenshot to a new directory...")
-            archive_dir = Path("./automation_archive")
-            archive_dir.mkdir(exist_ok=True)
-            screenshot_path = Path(screenshot_path_str)
-            file_system.move_file(str(screenshot_path), str(archive_dir / screenshot_path.name))
-
+            driver = self.browser.get_driver()
+            body_element = driver.find_element(By.TAG_NAME, 'body')
+            return body_element.text
         except Exception as e:
-            logger.error(f"An error occurred during the automation workflow: {e}", exc_info=True)
-        finally:
-            # 6. Clean up: close the browser and terminate the server process
-            print("\n[Step 5] Cleaning up resources...")
-            browser.close_browser()
-            if server_process:
-                process_manager.terminate_process(server_process.pid)
-            
-            print("\n--- Automation workflow complete! ---")
-            
-    print("\n=========================================================")
-    print("=== Automation Tools Prototype Complete ===")
-    print("=========================================================")
+            logger.error(f"Failed to scrape visible text: {e}")
+            return f"Error: Could not scrape page. Reason: {e}"
+
+    def find_and_click(self, locator: Tuple[str, str], timeout: int = 10) -> bool:
+        """Waits for an element to be clickable and then clicks it."""
+        try:
+            driver = self.browser.get_driver()
+            wait = WebDriverWait(driver, timeout)
+            by = getattr(By, locator[0].upper().replace(" ", "_"))
+            element = wait.until(EC.element_to_be_clickable((by, locator[1])))
+            element.click()
+            logger.info(f"Clicked on element located by {locator}")
+            return True
+        except Exception as e:
+            logger.error(f"Could not find or click element {locator}: {e}")
+            return False
+
+    def find_and_type(self, locator: Tuple[str, str], text: str, timeout: int = 10) -> bool:
+        """Waits for an element, clears it, and types text into it."""
+        try:
+            driver = self.browser.get_driver()
+            wait = WebDriverWait(driver, timeout)
+            by = getattr(By, locator[0].upper().replace(" ", "_"))
+            element = wait.until(EC.visibility_of_element_located((by, locator[1])))
+            element.clear()
+            element.send_keys(text)
+            logger.info(f"Typed text into element located by {locator}")
+            return True
+        except Exception as e:
+            logger.error(f"Could not find or type in element {locator}: {e}")
+            return False
+
+    def close_browser(self):
+        """Closes the browser instance."""
+        self.browser.close_browser()
+        return {"status": "success", "message": "Browser closed."}
