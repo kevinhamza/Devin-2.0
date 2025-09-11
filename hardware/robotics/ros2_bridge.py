@@ -321,7 +321,9 @@ if not RCLPY_AVAILABLE:
 else:
     CONCEPTUAL_MSG_TYPE_MAP = {}
     try: from geometry_msgs.msg import Twist as ActualTwist; CONCEPTUAL_MSG_TYPE_MAP["geometry_msgs/msg/Twist"] = ActualTwist; Twist = ActualTwist
-    except ImportError: if not RCLPY_AVAILABLE: Twist = Twist # Keep placeholder
+    except ImportError:
+        if not RCLPY_AVAILABLE:
+            Twist = Twist # Keep placeholder
     try: from geometry_msgs.msg import PoseStamped as ActualPoseStamped; CONCEPTUAL_MSG_TYPE_MAP["geometry_msgs/msg/PoseStamped"] = ActualPoseStamped; PoseStamped = ActualPoseStamped
     except ImportError:
         if not RCLPY_AVAILABLE:
