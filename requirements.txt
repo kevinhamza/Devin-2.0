@@ -49,6 +49,7 @@ ppad
 pure-python-adb
 dataclasses
 google-genai
+hf_xet
 
 
 
