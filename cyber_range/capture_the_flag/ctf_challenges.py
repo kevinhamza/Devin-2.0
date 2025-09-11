@@ -106,7 +106,7 @@ class CTFChallengeManager:
                 "name": "Pwn Easy: Buffer Overflow 101",
                 "description": "A basic C program vulnerable to a buffer overflow. Get shell access to read flag.txt.",
                 "category": ChallengeCategory.PWN, "difficulty": ChallengeDifficulty.EASY, "points": 100,
-                "flag_reference": "HASH:sha256:d0e8f5...")", # Hypothetical hash reference
+                "flag_reference": "HASH:sha256:d0e8f5...", # Hypothetical hash reference
                 "required_resources": ["ctf-pwn-bof101-container", "ctf-debug-tools-optional"],
             },
              {
