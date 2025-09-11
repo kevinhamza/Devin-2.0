@@ -415,7 +415,8 @@ class DevinDataMap:
                 department_owner="Product/Engineering/Security",
                 data_controller_details="Devin Corp, 123 AI Lane, Tech City, contact@devin.ai",
                 purposes_of_processing=["To understand service usage patterns", "To identify popular features and areas for improvement", "To detect and prevent fraudulent or abusive activity", "To monitor system performance and stability"],
-                legal_bases_for_processing={LegalBasisProcessing.LEGITIMATE_INTERESTS, LegalBasisProcessing.CONTRACT (for service operation logs)},
+                legal_bases_for_processing={LegalBasisProcessing.LEGITIMATE_INTERESTS, LegalBasisProcessing.CONTRACT # (for service operation logs)
+                                           },
                 data_subject_categories={"Registered Users", "Website Visitors"},
                 data_elements_processed_ids={"DE001", "DE013", "DE014", "DE015", "DE016", "DE008"}, # UserID, IP, UserAgent, InteractionEvents, SessionID, UserPreferences (for feature usage)
                 data_recipients_ids={"DR002", "DR003", "DR005", "DR010"}, # Loki, AnalyticsPlatform, CloudHost, AnalyticsService (3rd party)
