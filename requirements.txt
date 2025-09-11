@@ -99,3 +99,41 @@ reportlab
 
 # --- Other Utilities ---
 tqdm # For progress bars
+
+
+
+# Devin AGI - Python Dependencies
+# (Content is the same as the previous response)
+flask
+requests
+python-dotenv
+numpy
+pandas
+pyarrow
+websockets
+openai
+google-generativeai
+scikit-learn
+torch
+torchvision
+torchaudio
+ultralytics
+Pillow
+tiktoken
+sentence-transformers
+psutil
+watchdog
+pynput
+selenium
+pyautogui
+paramiko
+boto3
+google-cloud-storage
+google-cloud-compute
+pywin32; sys_platform == 'win32'
+pyserial
+opencv-python
+python-nmap
+beautifulsoup4
+reportlab
+tqdm
