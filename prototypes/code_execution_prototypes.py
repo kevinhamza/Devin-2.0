@@ -473,12 +473,12 @@ class CodeExecutionPrototype:
 
 
     def (self,
-                              command_str: str,
-                              shell_type: Literal['bash', 'sh', 'powershell', 'cmd'] = 'bash',
-                              timeout: Optional[int] = None,
-                              cwd: Optional[str] = None,
-                              env_vars: Optional[Dict[str,str]] = None
-                              ) -> ExecutionResult:
+        command_str: str,
+        shell_type: Literal['bash', 'sh', 'powershell', 'cmd'] = 'bash',
+        timeout: Optional[int] = None,
+        cwd: Optional[str] = None,
+        env_vars: Optional[Dict[str,str]] = None
+        ) -> ExecutionResult:
         """
         Executes a shell command or script using the specified shell type.
 
