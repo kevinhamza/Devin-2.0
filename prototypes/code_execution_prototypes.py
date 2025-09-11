@@ -523,18 +523,18 @@ class CodeExecutionPrototype:
              )
         else:
             # Fallback to local execution (INSECURE)
-             if not self.use_docker_by_default:
-                 logger.warning(f"Executing shell command locally via subprocess (Docker disabled by config) - EXTREMELY INSECURE for untrusted commands.")
-             elif not self._docker_available:
-                 logger.warning(f"Executing shell command locally via subprocess (Docker unavailable) - EXTREMELY INSECURE for untrusted commands.")
-             else: # Docker preferred but no image for this shell type
-                 logger.error(f"Cannot execute shell command: Docker execution preferred but no image configured for '{shell_type}'.")
-                 return ExecutionResult(stdout=None, stderr=f"No suitable Docker image configured for {shell_type}.", return_code=-1,
+            if not self.use_docker_by_default:
+                logger.warning(f"Executing shell command locally via subprocess (Docker disabled by config) - EXTREMELY INSECURE for untrusted commands.")
+            elif not self._docker_available:
+                logger.warning(f"Executing shell command locally via subprocess (Docker unavailable) - EXTREMELY INSECURE for untrusted commands.")
+            else: # Docker preferred but no image for this shell type
+                logger.error(f"Cannot execute shell command: Docker execution preferred but no image configured for '{shell_type}'.")
+                return ExecutionResult(stdout=None, stderr=f"No suitable Docker image configured for {shell_type}.", return_code=-1,
                                        duration_sec=time.monotonic() - start_time, error_message="Configuration error", timed_out=False)
 
 
-            shell_executable_path: Optional[str] = None
-            command_args: List[str] = []
+                shell_executable_path: Optional[str] = None
+                command_args: List[str] = []
 
             try:
                 if shell_type == 'bash':
