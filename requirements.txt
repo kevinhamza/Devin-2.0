@@ -138,3 +138,4 @@ python-nmap
 beautifulsoup4
 reportlab
 tqdm
+pyyaml
