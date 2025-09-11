@@ -254,8 +254,8 @@ class K8sConfigGenerator:
     def generate_service_dict(self,
                               name: str, # e.g., "devin-api-service"
                               selector_labels: Dict[str, str], # Labels to match Pods from a Deployment, e.g., {"app": "devin-api-server"}
-                              service_type: Literal["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"] = "ClusterIP",
                               ports: List[Dict[str, Any]], # e.g., [{"name": "http", "port": 80, "targetPort": 8080, "protocol": "TCP"}]
+                              service_type: Literal["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"] = "ClusterIP",
                               custom_labels: Optional[Dict[str, str]] = None,
                               annotations: Optional[Dict[str, str]] = None,
                               cluster_ip: Optional[str] = None, # Only for ClusterIP if specific IP needed (rarely)
