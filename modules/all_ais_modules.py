@@ -281,7 +281,42 @@ class AIAgent:
             AIProvider.PENTEST_GPT: self.pentest_gpt_module,
         }
         logger.info("AIAgent initialization complete.")
+        
+    def get_tool_selection_response(self, messages: List[Dict], tools: List[Dict]) -> Optional[Dict]:
+        """The core thinking process for tool use. Asks the LLM to choose the next best action."""
+        logger.info("AIAgent is selecting a tool to achieve the goal...")
+        
+        formatted_tools = json.dumps(tools, indent=2)
+        system_prompt = (
+            "You are an expert AI agent. Your task is to achieve the user's goal by selecting the next best tool to run. "
+            "Analyze the conversation history and the user's goal. Then, from the list of available tools, choose the single best tool to execute next. "
+            "Respond ONLY with a single JSON object for the tool you want to call. The JSON object must have two keys:\n"
+            "1. \"tool\": The name of the tool you want to use (e.g., \"list_files\").\n"
+            "2. \"parameters\": A dictionary of arguments for the tool (e.g., {\"path\": \"/home/user\"}).\n"
+            "If you believe the task is complete, respond with `{\"tool\": \"task_complete\", \"parameters\": {\"reason\": \"...your reason...\"}}`."
+        )
 
+        request_messages = [{"role": "system", "content": system_prompt}]
+        request_messages.extend(messages)
+        request_messages.append({"role": "system", "content": f"Here are the available tools:\n{formatted_tools}"})
+        
+        try:
+            # Use the most powerful model for this critical reasoning step
+            response_str = self.openai_module.get_chat_completion_content(request_messages)
+            if response_str is None or response_str.startswith("Error:"):
+                 raise ValueError(f"AI API call failed: {response_str}")
+
+            tool_call = json.loads(response_str)
+            if isinstance(tool_call, dict) and "tool" in tool_call and "parameters" in tool_call:
+                logger.info(f"AIAgent selected tool: {tool_call['tool']}")
+                return tool_call
+            return None
+        except (json.JSONDecodeError, TypeError, ValueError) as e:
+            logger.error(f"Failed to decode or validate the tool selection response: {e}")
+            return None
+        
+
+        
     def get_general_chat_response(self,
                                   messages: List[Dict[str, str]],
                                   provider: AIProvider = AIProvider.OPENAI,
