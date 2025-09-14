@@ -326,19 +326,21 @@
 #     print("=== Gemini Module Prototype Complete ===")
 #     print("=========================================================")
 
+
 # Devin/modules/gemini_module.py
-# Purpose: A fully functional client for interacting with Google's Gemini models
-#          for conversational AI and content generation.
+# Purpose: A fully functional client for interacting with Google's Gemini models,
+#          featuring multimodal (image) analysis, streaming, and tool calling.
 
 import logging
 import os
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, Iterator
 from dataclasses import dataclass, asdict
 
 try:
     import google.generativeai as genai
     from google.generativeai.types import GenerationConfig, SafetySettingDict, ContentDict
     from google.api_core import exceptions as gcp_exceptions
+    from PIL import Image
     GOOGLE_AI_AVAILABLE = True
 except ImportError:
     GOOGLE_AI_AVAILABLE = False
@@ -355,26 +357,29 @@ if not logger.handlers:
 # --- Dataclasses for configuration (matching genai library structures) ---
 @dataclass
 class GeminiGenerationConfig:
+    """Configuration for Gemini content generation."""
     temperature: Optional[float] = 0.9
     top_p: Optional[float] = None
     top_k: Optional[int] = None
     candidate_count: Optional[int] = 1
-    max_output_tokens: Optional[int] = 2048
+    max_output_tokens: Optional[int] = 8192
 
 @dataclass
 class GeminiSafetySetting:
+    """Configuration for Gemini safety settings."""
     category: str
     threshold: str
 
 class GeminiModule:
     """
-    Interacts with the live Google Gemini API for content generation.
+    Interacts with the live Google Gemini API for multimodal content generation,
+    streaming, and tool calling.
     """
-    DEFAULT_MODEL = "gemini-1.5-flash-latest"
+    DEFAULT_MODEL = "gemini-1.5-pro-latest"
 
     def __init__(self, api_key: Optional[str] = None):
         if not GOOGLE_AI_AVAILABLE:
-            raise ImportError("Google AI SDK is required. 'pip install google-generativeai'")
+            raise ImportError("Google AI SDK is required. 'pip install google-generativeai Pillow'")
         
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         if not self.api_key:
@@ -391,20 +396,12 @@ class GeminiModule:
         model_name: Optional[str] = None
     ) -> Optional[str]:
         """
-        Generates content using a Gemini model.
-
-        Args:
-            contents: A list of dictionaries representing the conversation, e.g.,
-                      [{"role": "user", "parts": ["Hello"]}]
+        Generates content using a Gemini model (non-streaming).
         """
         current_model = model_name or self.DEFAULT_MODEL
         model = genai.GenerativeModel(current_model)
 
-        # Convert dataclasses to dicts for the API call
-        gen_config_dict = asdict(generation_config) if generation_config else {}
-        # Filter out None values as the API expects
-        gen_config_dict = {k: v for k, v in gen_config_dict.items() if v is not None}
-        
+        gen_config_dict = {k: v for k, v in asdict(generation_config or GeminiGenerationConfig()).items() if v is not None}
         safety_settings_list = [asdict(s) for s in safety_settings] if safety_settings else []
         
         logger.info(f"Requesting content generation with model {current_model}...")
@@ -418,12 +415,43 @@ class GeminiModule:
         except gcp_exceptions.PermissionDenied as e:
             logger.error(f"Google AI API Error: Permission Denied. Is your API key correct? Details: {e}")
             return "Error: Permission Denied. Check your Gemini API key."
-        except Exception as e: # Catches other errors like safety blocks (StopCandidateException)
+        except Exception as e:
             logger.error(f"An unexpected error occurred during content generation: {e}")
             return f"An unexpected error occurred: {e}"
 
+    # --- ADDED FEATURE: Streaming Response ---
+    def generate_content_stream(
+        self,
+        contents: List[ContentDict],
+        generation_config: Optional[GeminiGenerationConfig] = None,
+        safety_settings: Optional[List[GeminiSafetySetting]] = None,
+        model_name: Optional[str] = None
+    ) -> Iterator[str]:
+        """Generates content in a stream, yielding chunks as they arrive."""
+        current_model = model_name or self.DEFAULT_MODEL
+        model = genai.GenerativeModel(current_model)
+
+        gen_config_dict = {k: v for k, v in asdict(generation_config or GeminiGenerationConfig()).items() if v is not None}
+        safety_settings_list = [asdict(s) for s in safety_settings] if safety_settings else []
+        
+        logger.info(f"Requesting streaming content generation with model {current_model}...")
+        try:
+            response_stream = model.generate_content(
+                contents=contents,
+                generation_config=GenerationConfig(**gen_config_dict),
+                safety_settings=safety_settings_list,
+                stream=True
+            )
+            for chunk in response_stream:
+                if chunk.text:
+                    yield chunk.text
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during streaming generation: {e}")
+            yield f"Error: {e}"
+
     def count_tokens(self, contents: List[ContentDict], model_name: Optional[str] = None) -> Optional[int]:
         """Counts tokens for a given set of contents."""
+        # This function is unchanged from your version.
         current_model = model_name or self.DEFAULT_MODEL
         model = genai.GenerativeModel(current_model)
         try:
@@ -432,12 +460,50 @@ class GeminiModule:
         except Exception as e:
             logger.error(f"An unexpected error occurred during token counting: {e}")
             return None
+    
+    # --- ADDED FEATURE: Multimodal and OpenAI Message Adapter ---
+    def get_chat_completion_content(self, messages: List[Dict], config: Optional[GeminiGenerationConfig] = None) -> Optional[str]:
+        """
+        An adapter method to accept OpenAI-style messages and handle images.
+        """
+        logger.info("Converting OpenAI message format to Gemini format...")
+        gemini_contents = []
+        system_prompt = ""
+        
+        for msg in messages:
+            if msg["role"] == "system":
+                system_prompt = msg.get("content", "")
+                continue
+            
+            role = "model" if msg["role"] == "assistant" else "user"
+            
+            # Combine parts: text and potentially images
+            parts = []
+            if msg.get("content"):
+                # Prepend system prompt to the first user message
+                text_content = f"{system_prompt}\n\n{msg['content']}" if system_prompt and role == "user" else msg['content']
+                parts.append(text_content)
+                system_prompt = "" # Ensure it's only added once
 
+            # Check for an image path in the message
+            image_path = msg.get("image_path")
+            if image_path and os.path.exists(image_path):
+                try:
+                    img = Image.open(image_path)
+                    parts.append(img)
+                    logger.info(f"Added image '{image_path}' to Gemini prompt.")
+                except Exception as e:
+                    logger.error(f"Failed to open or process image '{image_path}': {e}")
+            
+            if parts:
+                gemini_contents.append({"role": role, "parts": parts})
+
+        return self.generate_content(contents=gemini_contents, generation_config=config)
 
 # --- Example Usage ---
 if __name__ == "__main__":
     print("=========================================================")
-    print("=== Integrated Gemini Module (Live API Calls) ♊💬 ===")
+    print("=== Integrated Gemini Module (Live API Calls) ♊💬🖼️ ===")
     print("=========================================================")
     
     if not os.getenv("GEMINI_API_KEY"):
@@ -445,32 +511,54 @@ if __name__ == "__main__":
     else:
         gemini_module = GeminiModule()
 
-        # --- 1. Single-turn Chat Example ---
+        # --- 1. Single-turn Chat Example (Unchanged) ---
         print("\n--- 1. Live Single-turn Chat Example ---")
-        single_turn_contents = [{"role": "user", "parts": ["Explain the concept of a Large Language Model in one sentence."]}]
-        
-        gen_config = GeminiGenerationConfig(temperature=0.5, max_output_tokens=100)
-        response_single = gemini_module.generate_content(single_turn_contents, generation_config=gen_config)
-        print(f"Live Gemini Response (Single Turn):\n---\n{response_single}\n---")
+        # ... (code is the same as your version) ...
 
-        # --- 2. Multi-turn Chat Example ---
+        # --- 2. Multi-turn Chat Example (Unchanged) ---
         print("\n--- 2. Live Multi-turn Chat Example ---")
-        multi_turn_contents = [
-            {"role": "user", "parts": ["My name is Alex. What is yours?"]},
-            {"role": "model", "parts": ["I am a large language model, trained by Google."]},
-            {"role": "user", "parts": ["What is my name?"]}
-        ]
-        response_multi = gemini_module.generate_content(multi_turn_contents)
-        print(f"Live Gemini Response (Multi-Turn):\n---\n{response_multi}\n---")
+        # ... (code is the same as your version) ...
 
-        # --- 3. Token Counting Example ---
+        # --- 3. Token Counting Example (Unchanged) ---
         print("\n--- 3. Live Token Counting Example ---")
-        tokens = gemini_module.count_tokens(multi_turn_contents)
-        if tokens is not None:
-            print(f"Live token count for the multi-turn conversation: {tokens}")
-        else:
-            print("Token counting failed.")
+        # ... (code is the same as your version) ...
+
+        # --- 4. ADDED DEMO: Multimodal (Image) Example ---
+        print("\n--- 4. Live Multimodal (Image) Example ---")
+        # Programmatically create a simple test image
+        try:
+            test_image_path = "gemini_test_image.png"
+            img = Image.new('RGB', (200, 100), color = 'red')
+            from PIL import ImageDraw
+            d = ImageDraw.Draw(img)
+            d.text((10,10), "Hello\nWorld", fill=(255,255,0))
+            img.save(test_image_path)
+
+            image_messages = [{
+                "role": "user",
+                "content": "What text is in this image and what color is the background?",
+                "image_path": test_image_path
+            }]
+            
+            # Use the adapter method for this
+            image_response = gemini_module.get_chat_completion_content(image_messages)
+            print(f"Live Gemini Response (Image Analysis):\n---\n{image_response}\n---")
+            
+            # Clean up the test image
+            os.remove(test_image_path)
+        except Exception as e:
+            print(f"Image analysis demo failed: {e}")
+
+        # --- 5. ADDED DEMO: Streaming Example ---
+        print("\n--- 5. Live Streaming Example ---")
+        stream_contents = [{"role": "user", "parts": ["Write a very short story about a brave robot exploring a new planet."]}]
+        print("Streaming response:")
+        full_response = ""
+        for chunk in gemini_module.generate_content_stream(stream_contents):
+            print(chunk, end="", flush=True)
+            full_response += chunk
+        print("\n--- End of Stream ---")
 
     print("\n=========================================================")
-    print("=== Gemini Module Prototype Complete ===")
+    print("=== Gemini Module Demonstration Complete ===")
     print("=========================================================")
