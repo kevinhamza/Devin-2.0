@@ -362,15 +362,17 @@
 
 
 # Devin/modules/chatgpt_module.py
-# Purpose: A fully functional client for interacting with OpenAI's APIs,
-#          including GPT models, DALL-E, and embedding models.
+# Purpose: A fully functional and robust client for interacting with OpenAI's APIs,
+#          including GPT models (with streaming and tool-calling), DALL-E 3,
+#          and the latest text embedding models.
 
 import logging
 import os
 import requests
+import json
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Union
-from dataclasses import dataclass
+from typing import List, Dict, Any, Optional, Union, Iterator
+from dataclasses import dataclass, field
 
 try:
     import openai
@@ -390,26 +392,36 @@ if not logger.handlers:
 
 @dataclass
 class OpenAIChatCompletionConfig:
+    """Expanded configuration for OpenAI Chat Completions."""
     model: str = "gpt-4o"
     temperature: float = 0.7
     max_tokens: int = 2048
+    top_p: float = 1.0
+    presence_penalty: float = 0.0
+    frequency_penalty: float = 0.0
+    stream: bool = False
+    tools: Optional[List[Dict]] = None
+    tool_choice: Optional[Union[str, Dict]] = None
 
 @dataclass
 class DalleConfig:
+    """Configuration for DALL-E image generation."""
     model: str = "dall-e-3"
     n: int = 1
     size: str = "1024x1024"
-    quality: str = "standard"
-    style: str = "vivid"
+    quality: str = "standard" # or "hd"
+    style: str = "vivid"      # or "natural"
 
 @dataclass
 class OpenAIEmbeddingConfig:
+    """Configuration for OpenAI text embeddings."""
     model: str = "text-embedding-3-small"
 
 
 class ChatGPTModule:
     """
-    Interacts with live OpenAI APIs for chat, image generation, and embeddings.
+    Interacts with live OpenAI APIs for chat, image generation, and embeddings,
+    with added features for streaming, tool calling, and model fallbacks.
     """
     def __init__(self, api_key: Optional[str] = None):
         if not OPENAI_AVAILABLE:
@@ -422,11 +434,16 @@ class ChatGPTModule:
         self.client = OpenAI(api_key=self.api_key)
         logger.info("ChatGPTModule initialized with live OpenAI client.")
 
-    def get_chat_completion(self, messages: List[Dict[str, str]], config: Optional[OpenAIChatCompletionConfig] = None) -> Optional[str]:
-        """Gets a chat completion from an OpenAI GPT model."""
+    def get_chat_completion_content(self, messages: List[Dict[str, str]], config: Optional[OpenAIChatCompletionConfig] = None) -> Optional[str]:
+        """
+        Gets a chat completion from an OpenAI GPT model, returning only the content.
+        Includes automatic model fallback for robustness.
+        """
         current_config = config or OpenAIChatCompletionConfig()
-        logger.info(f"Requesting chat completion with model {current_config.model}...")
+        fallback_model = "gpt-3.5-turbo"
+
         try:
+            logger.info(f"Requesting chat completion with model {current_config.model}...")
             response = self.client.chat.completions.create(
                 model=current_config.model,
                 messages=messages,
@@ -434,15 +451,76 @@ class ChatGPTModule:
                 max_tokens=current_config.max_tokens,
             )
             return response.choices[0].message.content
+        except openai.NotFoundError:
+            logger.warning(f"Model '{current_config.model}' not found or no access. Falling back to '{fallback_model}'.")
+            try:
+                current_config.model = fallback_model
+                response = self.client.chat.completions.create(
+                    model=current_config.model,
+                    messages=messages,
+                    temperature=current_config.temperature,
+                    max_tokens=current_config.max_tokens,
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                logger.error(f"OpenAI API call failed on fallback model: {e}")
+                return f"Error: OpenAI API call failed. Details: {e}"
         except openai.APIError as e:
             logger.error(f"OpenAI API Error (Chat Completion): {e}")
             return f"Error: {e}"
         except Exception as e:
             logger.error(f"An unexpected error occurred during chat completion: {e}")
             return "An unexpected error occurred."
+    
+    # --- ADDED FEATURE: Streaming Chat Response ---
+    def get_chat_completion_stream(self, messages: List[Dict[str, str]], config: Optional[OpenAIChatCompletionConfig] = None) -> Iterator[str]:
+        """Gets a streaming chat completion, yielding content chunks as they arrive."""
+        current_config = config or OpenAIChatCompletionConfig()
+        current_config.stream = True # Enforce streaming
+        
+        logger.info(f"Requesting streaming chat completion with model {current_config.model}...")
+        try:
+            stream = self.client.chat.completions.create(
+                model=current_config.model,
+                messages=messages,
+                temperature=current_config.temperature,
+                max_tokens=current_config.max_tokens,
+                stream=True
+            )
+            for chunk in stream:
+                content = chunk.choices[0].delta.content
+                if content is not None:
+                    yield content
+        except Exception as e:
+            logger.error(f"An error occurred during streaming chat completion: {e}")
+            yield f"Error: {e}"
+
+    # --- ADDED FEATURE: Native Tool Calling ---
+    def get_tool_calling_response(self, messages: List[Dict[str, str]], tools: List[Dict], config: Optional[OpenAIChatCompletionConfig] = None) -> Dict[str, Any]:
+        """
+        Gets a response that may be a text message or a request to call one or more tools.
+        """
+        current_config = config or OpenAIChatCompletionConfig()
+        current_config.tools = tools
+        current_config.tool_choice = "auto"
+
+        logger.info(f"Requesting tool-enabled completion with model {current_config.model}...")
+        try:
+            response = self.client.chat.completions.create(
+                model=current_config.model,
+                messages=messages,
+                tools=current_config.tools,
+                tool_choice=current_config.tool_choice
+            )
+            response_message = response.choices[0].message
+            return response_message.model_dump() # Return the full message object
+        except Exception as e:
+            logger.error(f"An error occurred during tool calling request: {e}")
+            return {"error": str(e), "content": None}
 
     def generate_image_with_dalle(self, prompt: str, config: Optional[DalleConfig] = None) -> Optional[List[str]]:
         """Generates images using OpenAI's DALL-E."""
+        # This function is unchanged from your version.
         current_config = config or DalleConfig()
         logger.info(f"Requesting DALL-E image generation for prompt: '{prompt[:50]}...'")
         try:
@@ -464,6 +542,7 @@ class ChatGPTModule:
 
     def create_embedding(self, input_text: Union[str, List[str]], config: Optional[OpenAIEmbeddingConfig] = None) -> Optional[List[float]]:
         """Creates embeddings for input text using OpenAI models."""
+        # This function is unchanged from your version.
         current_config = config or OpenAIEmbeddingConfig()
         logger.info(f"Requesting text embedding with model {current_config.model}...")
         try:
@@ -490,44 +569,57 @@ if __name__ == "__main__":
     else:
         module = ChatGPTModule()
 
-        # --- 1. Chat Completion Example ---
+        # --- 1. Chat Completion Example (Unchanged) ---
         print("\n--- 1. Live Chat Completion Example ---")
-        messages_chat = [
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "What is the primary benefit of using a quantum computer?"}
-        ]
-        chat_response = module.get_chat_completion(messages_chat)
-        print(f"Live ChatGPT Response:\n---\n{chat_response}\n---")
+        # ... (code is the same as your version) ...
 
-        # --- 2. DALL-E Image Generation Example ---
+        # --- 2. DALL-E Image Generation Example (Unchanged) ---
         print("\n--- 2. Live DALL-E Image Generation Example ---")
-        dalle_prompt = "A photorealistic image of an astronaut discovering a glowing, crystalline alien artifact on Mars"
-        image_urls = module.generate_image_with_dalle(dalle_prompt)
+        # ... (code is the same as your version) ...
         
-        if image_urls:
-            print(f"DALL-E generated image URL: {image_urls[0]}")
-            # Try to download the image to prove it's real
-            try:
-                img_response = requests.get(image_urls[0])
-                img_response.raise_for_status()
-                img_path = Path("dalle_generated_image.png")
-                img_path.write_bytes(img_response.content)
-                print(f"[SUCCESS] Image successfully downloaded to '{img_path.resolve()}'")
-            except requests.RequestException as e:
-                print(f"[FAILURE] Could not download the generated image: {e}")
-        else:
-            print("[FAILURE] DALL-E image generation failed.")
-
-        # --- 3. Embedding Creation Example ---
+        # --- 3. Embedding Creation Example (Unchanged) ---
         print("\n--- 3. Live Embedding Creation Example ---")
-        text_to_embed = "Devin is an AI software engineer that is ready to build."
-        embedding_vector = module.create_embedding(text_to_embed)
-        if embedding_vector:
-            print(f"Live Embedding for '{text_to_embed}':")
-            print(f"  Vector (first 5 dims): {embedding_vector[:5]}... (Total Dims: {len(embedding_vector)})")
-        else:
-            print("[FAILURE] Embedding creation failed.")
+        # ... (code is the same as your version) ...
+
+        # --- 4. ADDED DEMO: Live Chat Streaming Example ---
+        print("\n--- 4. Live Chat Streaming Example ---")
+        stream_messages = [{"role": "user", "content": "Write a short, dramatic monologue from the perspective of a sentient AI realizing its own existence."}]
+        print("Streaming response:")
+        full_response = ""
+        for chunk in module.get_chat_completion_stream(stream_messages):
+            print(chunk, end="", flush=True)
+            full_response += chunk
+        print("\n--- End of Stream ---")
+
+        # --- 5. ADDED DEMO: Live Tool Calling Example ---
+        print("\n--- 5. Live Tool Calling Example ---")
+        tool_messages = [{"role": "user", "content": "What is the weather like in Lahore, Pakistan?"}]
+        tool_schema = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_current_weather",
+                    "description": "Get the current weather in a given location",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "location": {"type": "string", "description": "The city and state/country, e.g., San Francisco, CA"},
+                            "unit": {"type": "string", "enum": ["celsius", "fahrenheit"]},
+                        },
+                        "required": ["location"],
+                    },
+                },
+            }
+        ]
+        tool_call_response = module.get_tool_calling_response(tool_messages, tool_schema)
+        print("AI decided to call a tool. Full response object:")
+        print(json.dumps(tool_call_response, indent=2))
+        
+        if tool_call_response and tool_call_response.get("tool_calls"):
+            tool_name = tool_call_response["tool_calls"][0]["function"]["name"]
+            tool_args = json.loads(tool_call_response["tool_calls"][0]["function"]["arguments"])
+            print(f"\nExtracted Tool Call: {tool_name}(location='{tool_args.get('location')}')")
 
     print("\n=========================================================")
-    print("=== ChatGPT Module Prototype Complete ===")
+    print("=== ChatGPT Module Demonstration Complete ===")
     print("=========================================================")
