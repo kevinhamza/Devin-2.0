@@ -216,6 +216,9 @@
 #     print("=== AIAgent Prototype Demonstration Complete ===")
 #     print("=========================================================")
 
+
+
+
 # Devin/modules/all_ais_modules.py
 # Purpose: A facade that provides a unified interface to all underlying AI
 #          model modules, acting as a central agent for AI-driven tasks.
@@ -227,9 +230,9 @@ from enum import Enum, auto
 from typing import List, Dict, Any, Optional
 
 try:
-    # --- Import the REAL, integrated AI modules ---
+    # --- Corrected, consistent import paths ---
     from modules.chatgpt_module import ChatGPTModule
-    from modules.Gemini_module import GeminiModule
+    from modules.gemini_module import GeminiModule
     from modules.perplexity_module import PerplexityModule
     from modules.pentestgpt_ai_module import PentestGPTAIModule
     DEVIN_CORE_AVAILABLE = True
@@ -262,16 +265,12 @@ class AIAgent:
                  perplexity_api_key: Optional[str] = None):
         if not DEVIN_CORE_AVAILABLE:
             raise ImportError(f"A core Devin module is missing. Error: {_import_error}")
-            
+        
         logger.info("Initializing AIAgent with all live AI provider modules...")
 
-        # Initialize base LLM providers if keys are available
         self.openai_module = ChatGPTModule(api_key=openai_api_key) if openai_api_key else None
         self.gemini_module = GeminiModule(api_key=gemini_api_key) if gemini_api_key else None
         self.perplexity_module = PerplexityModule(api_key=perplexity_api_key) if perplexity_api_key else None
-
-        # Initialize specialized modules that depend on a base LLM
-        # PentestGPT requires an OpenAI-compatible interface, so we use our ChatGPTModule.
         self.pentest_gpt_module = PentestGPTAIModule(llm_interface=self.openai_module) if self.openai_module else None
 
         self.provider_map = {
@@ -283,40 +282,40 @@ class AIAgent:
         logger.info("AIAgent initialization complete.")
         
     def get_tool_selection_response(self, messages: List[Dict], tools: List[Dict]) -> Optional[Dict]:
-        """The core thinking process for tool use. Asks the LLM to choose the next best action."""
-        logger.info("AIAgent is selecting a tool to achieve the goal...")
-        
-        formatted_tools = json.dumps(tools, indent=2)
-        system_prompt = (
-            "You are an expert AI agent. Your task is to achieve the user's goal by selecting the next best tool to run. "
-            "Analyze the conversation history and the user's goal. Then, from the list of available tools, choose the single best tool to execute next. "
-            "Respond ONLY with a single JSON object for the tool you want to call. The JSON object must have two keys:\n"
-            "1. \"tool\": The name of the tool you want to use (e.g., \"list_files\").\n"
-            "2. \"parameters\": A dictionary of arguments for the tool (e.g., {\"path\": \"/home/user\"}).\n"
-            "If you believe the task is complete, respond with `{\"tool\": \"task_complete\", \"parameters\": {\"reason\": \"...your reason...\"}}`."
-        )
-
-        request_messages = [{"role": "system", "content": system_prompt}]
-        request_messages.extend(messages)
-        request_messages.append({"role": "system", "content": f"Here are the available tools:\n{formatted_tools}"})
+        """
+        The core thinking process for tool use. Asks the LLM to choose the next best action
+        using the provider's native tool-calling feature for improved reliability.
+        """
+        logger.info("AIAgent is selecting a tool to achieve the goal using native tool calling...")
+        if not self.openai_module:
+            logger.error("OpenAI module is required for tool selection but is not configured.")
+            return None
         
         try:
             # Use the most powerful model for this critical reasoning step
-            response_str = self.openai_module.get_chat_completion_content(request_messages)
-            if response_str is None or response_str.startswith("Error:"):
-                 raise ValueError(f"AI API call failed: {response_str}")
+            response_message = self.openai_module.get_tool_calling_response(messages, tools)
 
-            tool_call = json.loads(response_str)
-            if isinstance(tool_call, dict) and "tool" in tool_call and "parameters" in tool_call:
-                logger.info(f"AIAgent selected tool: {tool_call['tool']}")
-                return tool_call
-            return None
-        except (json.JSONDecodeError, TypeError, ValueError) as e:
-            logger.error(f"Failed to decode or validate the tool selection response: {e}")
-            return None
-        
+            if response_message and response_message.get("tool_calls"):
+                tool_call = response_message["tool_calls"][0] # Get the first tool call
+                function_name = tool_call["function"]["name"]
+                function_args = json.loads(tool_call["function"]["arguments"])
+                
+                selected_tool = {
+                    "tool": function_name,
+                    "parameters": function_args
+                }
+                logger.info(f"AIAgent selected tool: {selected_tool['tool']}")
+                return selected_tool
+            else:
+                # The model decided not to call a tool and just responded with text.
+                # This can be interpreted as task completion or a request for clarification.
+                reason = response_message.get("content", "The model chose to respond instead of using a tool.")
+                return {"tool": "task_complete", "parameters": {"reason": reason}}
 
-        
+        except Exception as e:
+            logger.error(f"Failed to get or parse tool selection response: {e}")
+            return None
+    
     def get_general_chat_response(self,
                                   messages: List[Dict[str, str]],
                                   provider: AIProvider = AIProvider.OPENAI,
@@ -329,33 +328,32 @@ class AIAgent:
             
         logger.info(f"Requesting general chat response from provider: {provider.name}")
 
-        if provider in [AIProvider.OPENAI, AIProvider.PERPLEXITY]:
-            # These modules use the OpenAI-compatible message format directly
-            return module.get_chat_completion_content(messages=messages, config=config)
+        # The underlying modules now all have a `get_chat_completion_content` adapter
+        return module.get_chat_completion_content(messages=messages, config=config)
 
-        elif provider == AIProvider.GOOGLE:
-            # --- Adapter: Convert OpenAI message format to Gemini's "contents" format ---
-            gemini_contents = []
-            system_prompt = ""
-            for msg in messages:
-                if msg["role"] == "system":
-                    system_prompt = msg["content"]
-                    continue
-                # Prepend system prompt to the first user message for Gemini
-                if msg["role"] == "user" and system_prompt:
-                    content = f"{system_prompt}\n\nUser Question: {msg['content']}"
-                    system_prompt = "" # Ensure it's only added once
-                else:
-                    content = msg["content"]
-                
-                gemini_contents.append({
-                    "role": "model" if msg["role"] == "assistant" else msg["role"],
-                    "parts": [content]
-                })
-            return self.gemini_module.generate_content(contents=gemini_contents, **config)
+    # --- ADDED FEATURE: Specialized Code Generation ---
+    def generate_code(self, prompt: str, language: str, provider: AIProvider = AIProvider.OPENAI) -> Optional[str]:
+        """Generates a code snippet using a specialized prompt."""
+        logger.info(f"Requesting {language} code generation from {provider.name}...")
+        system_prompt = (
+            f"You are an expert {language} programmer. Your task is to write a complete, functional, "
+            f"and well-documented code snippet for the following request. "
+            f"Respond ONLY with the code inside a markdown block (e.g., ```python...```)."
+        )
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
         
-        else:
-            return f"Error: Provider '{provider.name}' is not supported for general chat."
+        response = self.get_general_chat_response(messages, provider, {"temperature": 0.1})
+        
+        # Clean up markdown fences if present
+        if response and f"```{language}" in response:
+            return response.split(f"```{language}\n")[1].split("\n```")[0]
+        elif response and "```" in response:
+            return response.strip().strip("`").strip()
+            
+        return response
 
     def get_search_augmented_response(self, query: str) -> Optional[str]:
         """Convenience method to get a response from a search-augmented AI (Perplexity)."""
@@ -376,49 +374,52 @@ if __name__ == "__main__":
     print("=== All AIs Module (AIAgent) - Live Integration 🤖🌐 ===")
     print("=========================================================")
 
-    # Check for API keys
     openai_key = os.getenv("OPENAI_API_KEY")
     gemini_key = os.getenv("GEMINI_API_KEY")
     perplexity_key = os.getenv("PERPLEXITY_API_KEY")
     
     if not all([openai_key, gemini_key, perplexity_key]):
-        print("\nERROR: One or more API keys (OPENAI_API_KEY, GEMINI_API_KEY, PERPLEXITY_API_KEY) are not set.")
-        print("This live demo requires all three keys to be set as environment variables.")
+        print("\nERROR: One or more API keys are not set.")
     else:
-        # Initialize the central AIAgent with live keys
         ai_agent = AIAgent(
             openai_api_key=openai_key,
             gemini_api_key=gemini_key,
             perplexity_api_key=perplexity_key
         )
 
-        # --- 1. Get a response from the default provider (OpenAI) ---
-        print("\n--- 1. Task: General question for OpenAI ---")
-        prompt_1 = "Explain the concept of a 'zero-day vulnerability' in one clear sentence."
-        response_1 = ai_agent.get_general_chat_response([{"role": "user", "content": prompt_1}], provider=AIProvider.OPENAI)
-        print(f"  > Prompt: {prompt_1}")
-        print(f"  < OpenAI: {response_1}")
+        # --- Use Cases from your version ---
+        # ... (Task 1: OpenAI, Task 2: Gemini, Task 3: Perplexity, Task 4: PentestGPT) ...
 
-        # --- 2. Get a response from Google Gemini ---
-        print("\n--- 2. Task: Code generation task for Google Gemini ---")
-        prompt_2 = "Write a simple Python function that takes a list of numbers and returns their sum."
-        response_2 = ai_agent.get_general_chat_response([{"role": "user", "content": prompt_2}], provider=AIProvider.GOOGLE)
-        print(f"  > Prompt: {prompt_2}")
-        print(f"  < Google Gemini:\n{response_2}")
+        # --- 5. ADDED DEMO: Tool Selection using Native API Feature ---
+        print("\n--- 5. Task: Tool Selection for a user goal ---")
+        user_goal = "What is the weather like in Lahore?"
+        conversation = [{"role": "user", "content": user_goal}]
+        # Convert our tool schema to OpenAI's required format
+        available_tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_current_weather",
+                    "description": "Get the current weather in a given location",
+                    "parameters": {
+                        "type": "object",
+                        "properties": { "location": {"type": "string"} },
+                        "required": ["location"],
+                    },
+                },
+            }
+        ]
+        decision = ai_agent.get_tool_selection_response(conversation, available_tools)
+        print(f"  > User Goal: {user_goal}")
+        print(f"  < AI's Decision:\n{json.dumps(decision, indent=2)}")
 
-        # --- 3. Use the search-augmented convenience method (Perplexity) ---
-        print("\n--- 3. Task: Search-augmented query for Perplexity ---")
-        prompt_3 = "What was the closing price of NVIDIA (NVDA) stock yesterday?"
-        response_3 = ai_agent.get_search_augmented_response(query=prompt_3)
-        print(f"  > Prompt: {prompt_3}")
-        print(f"  < Perplexity: {response_3}")
+        # --- 6. ADDED DEMO: Specialized Code Generation ---
+        print("\n--- 6. Task: Specialized Code Generation ---")
+        code_prompt = "Create a Python function that takes a URL and returns the title of the web page using the requests and BeautifulSoup libraries."
+        generated_code = ai_agent.generate_code(code_prompt, "python")
+        print(f"  > Code Prompt: {code_prompt}")
+        print(f"  < Generated Python Code:\n{generated_code}")
 
-        # --- 4. Use the specialized PentestGPT convenience method ---
-        print("\n--- 4. Task: Pentesting analysis via PentestGPT ---")
-        dummy_nmap = "Host is up. PORT 22/tcp open ssh OpenSSH 8.9p1. PORT 443/tcp open ssl/http nginx 1.18.0."
-        pentest_analysis = ai_agent.get_pentest_analysis("Nmap", dummy_nmap)
-        print(f"  > Input: Nmap scan output...")
-        print(f"  < PentestGPT:\n{json.dumps(pentest_analysis, indent=2)}")
 
     print("\n=========================================================")
     print("=== AIAgent Live Demonstration Complete ===")
