@@ -242,23 +242,151 @@
 #     print("=== Perplexity Module Prototype Complete ===")
 #     print("================================================================")
 
+# # Devin/modules/perplexity_module.py
+# # Purpose: A fully functional client for interacting with the Perplexity AI API,
+# #          focusing on conversational search and sourced answers.
+
+# import logging
+# import os
+# import json
+# import request
+# from dataclasses import dataclass
+# from typing import List, Dict, Optional, Any
+
+# try:
+#     import openai
+#     from openai import OpenAI
+#     OPENAI_AVAILABLE = True
+# except ImportError:
+#     OPENAI_AVAILABLE = False
+
+
+# # Configure basic logging
+# logger = logging.getLogger("PerplexityModule")
+# if not logger.handlers:
+#     _console_handler = logging.StreamHandler()
+#     _console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+#     logger.addHandler(_console_handler)
+#     logger.setLevel(logging.INFO)
+
+# @dataclass
+# class PerplexityChatConfig:
+#     """
+#     Configuration for Perplexity API chat completion calls.
+#     """
+#     model: str = "llama-3-sonar-large-32k-online"
+#     temperature: Optional[float] = 0.7
+#     max_tokens: Optional[int] = 1024
+
+# class PerplexityModule:
+#     """
+#     Interacts with the live Perplexity AI API using an OpenAI-compatible client.
+#     """
+#     def __init__(self, api_key: Optional[str] = None):
+#         if not OPENAI_AVAILABLE:
+#             raise ImportError("The 'openai' library is required. 'pip install openai'")
+        
+#         self.api_key = api_key or os.getenv("PERPLEXITY_API_KEY")
+#         if not self.api_key:
+#             raise ValueError("Perplexity API key is required. Set it via the PERPLEXITY_API_KEY environment variable.")
+            
+#         # The key is to override the base_url to point to Perplexity's API
+#         self.client = OpenAI(
+#             api_key=self.api_key,
+#             base_url="https://api.perplexity.ai"
+#         )
+#         logger.info("PerplexityModule initialized with live Perplexity API client.")
+
+#     def get_chat_completion(self, messages: List[Dict[str, str]], config: Optional[PerplexityChatConfig] = None) -> Optional[Dict[str, Any]]:
+#         """
+#         Gets a chat completion from Perplexity AI.
+
+#         Returns:
+#             The 'choice' object from the API response, or an error dictionary.
+#         """
+#         current_config = config or PerplexityChatConfig()
+#         logger.info(f"Requesting chat completion with model {current_config.model}...")
+        
+#         try:
+#             response = self.client.chat.completions.create(
+#                 model=current_config.model,
+#                 messages=messages,
+#                 temperature=current_config.temperature,
+#                 max_tokens=current_config.max_tokens,
+#             )
+#             return response.choices[0]
+#         except openai.APIError as e:
+#             logger.error(f"Perplexity API Error (Chat Completion): {e}")
+#             return {"error": {"message": str(e), "type": "api_error"}}
+#         except Exception as e:
+#             logger.error(f"An unexpected error occurred during chat completion: {e}")
+#             return {"error": {"message": "An unexpected error occurred.", "type": "client_error"}}
+
+#     def get_chat_completion_content(self, messages: List[Dict[str, str]], config: Optional[PerplexityChatConfig] = None) -> Optional[str]:
+#         """
+#         Convenience method to get only the text content from a chat completion.
+#         """
+#         choice_object = self.get_chat_completion(messages, config)
+#         if choice_object and "message" in choice_object and "content" in choice_object.message:
+#             return choice_object.message.content
+#         elif choice_object and "error" in choice_object:
+#              return f"Error: {choice_object['error'].get('message', 'Unknown API error')}"
+#         return None
+
+# # --- Example Usage ---
+# if __name__ == "__main__":
+#     print("=========================================================")
+#     print("=== Integrated Perplexity Module (Live API Calls) 🌐💡 ===")
+#     print("=========================================================")
+
+#     if not os.getenv("PERPLEXITY_API_KEY"):
+#         print("\nERROR: PERPLEXITY_API_KEY environment variable is not set. This demo requires a live API key.")
+#     else:
+#         module = PerplexityModule()
+
+#         # --- 1. Conversational Search Example ---
+#         print("\n--- 1. Live Conversational Search Example ---")
+#         messages_search = [
+#             {"role": "system", "content": "You are an AI assistant that provides accurate and sourced information."},
+#             {"role": "user", "content": "What were the key findings of the Artemis I mission?"}
+#         ]
+        
+#         search_response_content = module.get_chat_completion_content(messages_search)
+#         print(f"Live Perplexity Response:\n---\n{search_response_content}\n---")
+
+#         # --- 2. General Question Example ---
+#         print("\n--- 2. Live General Question Example ---")
+#         messages_general = [
+#             {"role": "user", "content": "Explain the difference between a VPN and a proxy server in simple terms."}
+#         ]
+#         general_response_content = module.get_chat_completion_content(messages_general)
+#         print(f"Live Perplexity Response:\n---\n{general_response_content}\n---")
+
+#     print("\n=========================================================")
+#     print("=== Perplexity Module Prototype Complete ===")
+#     print("=========================================================")
+
+
+
+
+
+
+
+
+
+
+
+
 # Devin/modules/perplexity_module.py
-# Purpose: A fully functional client for interacting with the Perplexity AI API,
-#          focusing on conversational search and sourced answers.
+# Purpose: A fully functional, native client for interacting with the Perplexity AI API,
+#          focusing on conversational search, sourced answers, and streaming.
 
 import logging
 import os
 import json
-from dataclasses import dataclass
-from typing import List, Dict, Optional, Any
-
-try:
-    import openai
-    from openai import OpenAI
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
-
+import requests
+from dataclasses import dataclass, asdict
+from typing import List, Dict, Optional, Any, Iterator
 
 # Configure basic logging
 logger = logging.getLogger("PerplexityModule")
@@ -271,66 +399,93 @@ if not logger.handlers:
 @dataclass
 class PerplexityChatConfig:
     """
-    Configuration for Perplexity API chat completion calls.
+    Expanded configuration for Perplexity API chat completion calls.
     """
-    model: str = "llama-3-sonar-large-32k-online"
+    model: str = "llama-3-sonar-large-32k-online" # Search-enabled model
     temperature: Optional[float] = 0.7
+    top_p: Optional[float] = 1.0
     max_tokens: Optional[int] = 1024
+    frequency_penalty: Optional[float] = 0.0
 
 class PerplexityModule:
     """
-    Interacts with the live Perplexity AI API using an OpenAI-compatible client.
+    Interacts with the live Perplexity AI API using native HTTP requests.
     """
     def __init__(self, api_key: Optional[str] = None):
-        if not OPENAI_AVAILABLE:
-            raise ImportError("The 'openai' library is required. 'pip install openai'")
-        
         self.api_key = api_key or os.getenv("PERPLEXITY_API_KEY")
         if not self.api_key:
             raise ValueError("Perplexity API key is required. Set it via the PERPLEXITY_API_KEY environment variable.")
             
-        # The key is to override the base_url to point to Perplexity's API
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://api.perplexity.ai"
-        )
+        self.api_url = "https://api.perplexity.ai/chat/completions"
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
         logger.info("PerplexityModule initialized with live Perplexity API client.")
-
-    def get_chat_completion(self, messages: List[Dict[str, str]], config: Optional[PerplexityChatConfig] = None) -> Optional[Dict[str, Any]]:
-        """
-        Gets a chat completion from Perplexity AI.
-
-        Returns:
-            The 'choice' object from the API response, or an error dictionary.
-        """
-        current_config = config or PerplexityChatConfig()
-        logger.info(f"Requesting chat completion with model {current_config.model}...")
-        
-        try:
-            response = self.client.chat.completions.create(
-                model=current_config.model,
-                messages=messages,
-                temperature=current_config.temperature,
-                max_tokens=current_config.max_tokens,
-            )
-            return response.choices[0]
-        except openai.APIError as e:
-            logger.error(f"Perplexity API Error (Chat Completion): {e}")
-            return {"error": {"message": str(e), "type": "api_error"}}
-        except Exception as e:
-            logger.error(f"An unexpected error occurred during chat completion: {e}")
-            return {"error": {"message": "An unexpected error occurred.", "type": "client_error"}}
 
     def get_chat_completion_content(self, messages: List[Dict[str, str]], config: Optional[PerplexityChatConfig] = None) -> Optional[str]:
         """
-        Convenience method to get only the text content from a chat completion.
+        Gets a standard (non-streaming) chat completion from Perplexity AI.
         """
-        choice_object = self.get_chat_completion(messages, config)
-        if choice_object and "message" in choice_object and "content" in choice_object.message:
-            return choice_object.message.content
-        elif choice_object and "error" in choice_object:
-             return f"Error: {choice_object['error'].get('message', 'Unknown API error')}"
-        return None
+        current_config = config or PerplexityChatConfig()
+        
+        # Prepare payload from dataclass, removing None values
+        payload = asdict(current_config)
+        payload = {k: v for k, v in payload.items() if v is not None}
+        payload["messages"] = messages
+        
+        logger.info(f"Requesting chat completion with model {current_config.model}...")
+        try:
+            response = requests.post(self.api_url, headers=self.headers, json=payload)
+            response.raise_for_status() # Raises an HTTPError for bad responses (4xx or 5xx)
+            
+            response_data = response.json()
+            return response_data['choices'][0]['message']['content']
+            
+        except requests.HTTPError as e:
+            logger.error(f"Perplexity API HTTP Error: {e.response.status_code} - {e.response.text}")
+            return f"Error: Perplexity API call failed. Details: {e.response.text}"
+        except requests.RequestException as e:
+            logger.error(f"Network error during Perplexity request: {e}")
+            return f"Error: Network error. Details: {e}"
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during chat completion: {e}")
+            return "An unexpected error occurred."
+
+    # --- ADDED FEATURE: Streaming Chat Response ---
+    def get_chat_completion_stream(self, messages: List[Dict[str, str]], config: Optional[PerplexityChatConfig] = None) -> Iterator[str]:
+        """
+        Gets a streaming chat completion, yielding content chunks as they arrive.
+        """
+        current_config = config or PerplexityChatConfig()
+        
+        payload = asdict(current_config)
+        payload = {k: v for k, v in payload.items() if v is not None}
+        payload["messages"] = messages
+        payload["stream"] = True
+        
+        logger.info(f"Requesting STREAMING chat completion with model {current_config.model}...")
+        try:
+            with requests.post(self.api_url, headers=self.headers, json=payload, stream=True) as response:
+                response.raise_for_status()
+                for line in response.iter_lines():
+                    if line:
+                        decoded_line = line.decode('utf-8')
+                        if decoded_line.startswith('data: '):
+                            # Remove the 'data: ' prefix and parse the JSON
+                            json_str = decoded_line[6:]
+                            if json_str.strip() == "[DONE]":
+                                break
+                            
+                            chunk_data = json.loads(json_str)
+                            delta = chunk_data['choices'][0].get('delta', {})
+                            content = delta.get('content')
+                            if content:
+                                yield content
+        except Exception as e:
+            logger.error(f"An error occurred during streaming chat completion: {e}")
+            yield f"Error: An unexpected error occurred during streaming. Details: {e}"
 
 # --- Example Usage ---
 if __name__ == "__main__":
@@ -343,7 +498,7 @@ if __name__ == "__main__":
     else:
         module = PerplexityModule()
 
-        # --- 1. Conversational Search Example ---
+        # --- 1. Conversational Search Example (Unchanged) ---
         print("\n--- 1. Live Conversational Search Example ---")
         messages_search = [
             {"role": "system", "content": "You are an AI assistant that provides accurate and sourced information."},
@@ -353,7 +508,7 @@ if __name__ == "__main__":
         search_response_content = module.get_chat_completion_content(messages_search)
         print(f"Live Perplexity Response:\n---\n{search_response_content}\n---")
 
-        # --- 2. General Question Example ---
+        # --- 2. General Question Example (Unchanged) ---
         print("\n--- 2. Live General Question Example ---")
         messages_general = [
             {"role": "user", "content": "Explain the difference between a VPN and a proxy server in simple terms."}
@@ -361,6 +516,20 @@ if __name__ == "__main__":
         general_response_content = module.get_chat_completion_content(messages_general)
         print(f"Live Perplexity Response:\n---\n{general_response_content}\n---")
 
+        # --- 3. ADDED DEMO: Live Streaming Example ---
+        print("\n--- 3. Live Streaming Example ---")
+        stream_messages = [
+            {"role": "system", "content": "Be brief and concise."},
+            {"role": "user", "content": "List the first three planets of our solar system."}
+        ]
+        
+        print("Streaming Perplexity Response:")
+        full_response = ""
+        for chunk in module.get_chat_completion_stream(stream_messages):
+            print(chunk, end="", flush=True)
+            full_response += chunk
+        print("\n--- End of Stream ---")
+
     print("\n=========================================================")
-    print("=== Perplexity Module Prototype Complete ===")
+    print("=== Perplexity Module Demonstration Complete ===")
     print("=========================================================")
