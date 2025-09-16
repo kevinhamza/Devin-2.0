@@ -232,7 +232,7 @@ from typing import List, Dict, Any, Optional
 
 # --- Import the REAL, integrated AI modules ---
 from modules.chatgpt_module import ChatGPTModule
-from modules.gemini_module import GeminiModule
+from modules.Gemini_module import GeminiModule
 from modules.perplexity_module import PerplexityModule
 from modules.pentestgpt_ai_module import PentestGPTAIModule
 
