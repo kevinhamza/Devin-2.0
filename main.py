@@ -60,6 +60,7 @@ class DevinAGI:
     """
     def __init__(self):
         logger.info("Initializing Devin AGI...")
+        self.mode = os.getenv("DEVIN_MODE", "live") # Read the mode
         self.is_running = True
         self.conversation_history: List[Dict] = []
 
@@ -69,6 +70,7 @@ class DevinAGI:
         # --- 2. Initialize Core Brain Components ---
         logger.info("Initializing core cognitive modules...")
         self.agent = AIAgent(
+            mode=self.mode, # Pass the mode to the agent
             openai_api_key=os.getenv("OPENAI_API_KEY"),
             gemini_api_key=os.getenv("GEMINI_API_KEY"),
             perplexity_api_key=os.getenv("PERPLEXITY_API_KEY")
