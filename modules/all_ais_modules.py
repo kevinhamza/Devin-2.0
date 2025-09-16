@@ -299,11 +299,11 @@ class MockPentestGPTModule:
 
 
 class AIAgent:
-    """
-    A unified agent that can operate in 'live' or 'mock' mode.
-    """
+    """A unified agent that can operate in 'live' or 'mock' mode."""
     def __init__(self, mode: str = 'live', **kwargs):
-        self.mode = mode
+        if not DEVIN_CORE_AVAILABLE:
+            raise ImportError("One of the AI provider modules is missing.")
+        self.mode = mode.lower()
         logger.info(f"Initializing AIAgent in '{self.mode.upper()}' mode...")
 
         if self.mode == 'live':
@@ -332,23 +332,22 @@ class AIAgent:
         The core thinking process for tool use. Asks the LLM to choose the next best action
         using the provider's native tool-calling feature for improved reliability.
         """
-        logger.info("AIAgent is selecting a tool to achieve the goal using native tool calling...")
+        # logger.info("AIAgent is selecting a tool to achieve the goal using native tool calling...")
+        logger.info("AIAgent is selecting a tool to achieve the goal...")
         if not self.openai_module:
             logger.error("OpenAI module is required for tool selection but is not configured.")
             return None
         
         try:
             # Use the most powerful model for this critical reasoning step
-            response_message = self.openai_module.get_tool_calling_response(messages, tools)
+            openai_tools = [{"type": "function", "function": tool} for tool in tools]
+            response_message = self.openai_module.get_tool_calling_response(messages, openai_tools)
 
             if response_message and response_message.get("tool_calls"):
-                tool_call = response_message["tool_calls"][0] # Get the first tool call
-                function_name = tool_call["function"]["name"]
-                function_args = json.loads(tool_call["function"]["arguments"])
-                
+                tool_call = response_message["tool_calls"][0]
                 selected_tool = {
-                    "tool": function_name,
-                    "parameters": function_args
+                    "tool": tool_call["function"]["name"],
+                    "parameters": json.loads(tool_call["function"]["arguments"])
                 }
                 logger.info(f"AIAgent selected tool: {selected_tool['tool']}")
                 return selected_tool
