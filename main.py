@@ -170,6 +170,10 @@ class DevinAGI:
             if not tool_call or not isinstance(tool_call, dict) or "tool" not in tool_call:
                 logger.info("Agent decided no further action is needed or failed to select a tool. Concluding task.")
                 break
+            if tool_call.get("tool") == "task_complete":
+                reason = tool_call.get("parameters", {}).get("reason", "No specific reason provided.")
+                self.uim.display_message(f"Agent has concluded the task. Reason: {reason}", level='success')
+                break
 
             # 2. VERIFY & CONSENT: Check the plan against ethical and utility functions
             plan = Plan(steps=[tool_call])
