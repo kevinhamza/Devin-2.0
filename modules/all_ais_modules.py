@@ -231,10 +231,15 @@ from enum import Enum, auto
 from typing import List, Dict, Any, Optional
 
 # --- Import the REAL, integrated AI modules ---
-from modules.chatgpt_module import ChatGPTModule
-from modules.Gemini_module import GeminiModule
-from modules.perplexity_module import PerplexityModule
-from modules.pentestgpt_ai_module import PentestGPTAIModule
+try:
+    from modules.chatgpt_module import ChatGPTModule
+    from modules.gemini_module import GeminiModule
+    from modules.perplexity_module import PerplexityModule
+    from modules.pentestgpt_ai_module import PentestGPTAIModule
+    DEVIN_CORE_AVAILABLE = True
+except ImportError as e:
+    DEVIN_CORE_AVAILABLE = False
+    _import_error = e
 
 logger = logging.getLogger("AIAgent")
 # (Logger setup assumed)
@@ -302,7 +307,8 @@ class AIAgent:
     """A unified agent that can operate in 'live' or 'mock' mode."""
     def __init__(self, mode: str = 'live', **kwargs):
         if not DEVIN_CORE_AVAILABLE:
-            raise ImportError("One of the AI provider modules is missing.")
+            raise ImportError(f"A core Devin AI module is missing. Error: {_import_error}")
+
         self.mode = mode.lower()
         logger.info(f"Initializing AIAgent in '{self.mode.upper()}' mode...")
 
@@ -341,7 +347,7 @@ class AIAgent:
         try:
             # Use the most powerful model for this critical reasoning step
             openai_tools = [{"type": "function", "function": tool} for tool in tools]
-            response_message = self.openai_module.get_tool_calling_response(messages, openai_tools)
+            response_message = self.openai_module.get_tool_calling_response(messages, openai_tools_schema)
 
             if response_message and response_message.get("tool_calls"):
                 tool_call = response_message["tool_calls"][0]
