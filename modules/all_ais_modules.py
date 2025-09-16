@@ -252,15 +252,31 @@ class MockChatGPTModule:
     def __init__(self, api_key=None): logger.info("Initialized MOCK ChatGPTModule.")
     def get_chat_completion_content(self, messages: List[Dict], config: Optional[Dict] = None) -> str:
         return "This is a mocked response from the offline ChatGPT module."
+    # def get_tool_calling_response(self, messages: List[Dict], tools: List[Dict]) -> Dict:
+    #     logger.info("MOCK ChatGPTModule is selecting a tool...")
+    #     user_prompt = messages[-1]['content'].lower()
+    #     if "list" in user_prompt and "file" in user_prompt:
+    #         return {"tool_calls": [{"function": {"name": "list_files", "arguments": '{"path": "."}'}}]}
+    #     elif "read" in user_prompt:
+    #         return {"tool_calls": [{"function": {"name": "read_file", "arguments": '{"path": "README.md"}'}}]}
+    #     else:
+    #         return {"content": "I'm not sure which tool to use. Can you be more specific?"}
     def get_tool_calling_response(self, messages: List[Dict], tools: List[Dict]) -> Dict:
         logger.info("MOCK ChatGPTModule is selecting a tool...")
-        user_prompt = messages[-1]['content'].lower()
+        user_prompt = ""
+        for msg in reversed(messages):
+            if msg['role'] == 'user':
+                user_prompt = msg['content'].lower()
+                break
+        
+        # --- UPGRADED MOCK LOGIC ---
         if "list" in user_prompt and "file" in user_prompt:
             return {"tool_calls": [{"function": {"name": "list_files", "arguments": '{"path": "."}'}}]}
         elif "read" in user_prompt:
             return {"tool_calls": [{"function": {"name": "read_file", "arguments": '{"path": "README.md"}'}}]}
         else:
-            return {"content": "I'm not sure which tool to use. Can you be more specific?"}
+            # Instead of giving up, ask for clarification.
+            return {"content": f"I am a mock AI and I don't understand the goal '{user_prompt}'. Please provide a more specific task, like 'list the files in the current directory.'"}
 
 class MockGeminiModule:
     def __init__(self, api_key=None): logger.info("Initialized MOCK GeminiModule.")
