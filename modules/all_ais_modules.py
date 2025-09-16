@@ -222,6 +222,7 @@
 # Devin/modules/all_ais_modules.py
 # Purpose: A facade that provides a unified interface to all underlying AI
 #          model modules, acting as a central agent for AI-driven tasks.
+#          Includes a "Mock Mode" for offline/free development.
 
 import logging
 import os
@@ -229,49 +230,78 @@ import json
 from enum import Enum, auto
 from typing import List, Dict, Any, Optional
 
-try:
-    # --- Corrected, consistent import paths ---
-    from modules.chatgpt_module import ChatGPTModule
-    from modules.Gemini_module import GeminiModule
-    from modules.perplexity_module import PerplexityModule
-    from modules.pentestgpt_ai_module import PentestGPTAIModule
-    DEVIN_CORE_AVAILABLE = True
-except ImportError as e:
-    DEVIN_CORE_AVAILABLE = False
-    _import_error = e
+# --- Import the REAL, integrated AI modules ---
+from modules.chatgpt_module import ChatGPTModule
+from modules.gemini_module import GeminiModule
+from modules.perplexity_module import PerplexityModule
+from modules.pentestgpt_ai_module import PentestGPTAIModule
 
-# Configure basic logging
 logger = logging.getLogger("AIAgent")
-if not logger.handlers:
-    _console_handler = logging.StreamHandler()
-    _console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(_console_handler)
-    logger.setLevel(logging.INFO)
+# (Logger setup assumed)
 
 class AIProvider(Enum):
-    """Enumeration for the available AI providers."""
     OPENAI = auto()
     GOOGLE = auto()
     PERPLEXITY = auto()
     PENTEST_GPT = auto()
 
+# --- ADDED FEATURE: Mock AI Modules for Offline/Free Use ---
+
+class MockChatGPTModule:
+    """A mock version of ChatGPTModule that returns canned responses."""
+    def __init__(self, api_key=None): logger.info("Initialized MOCK ChatGPTModule.")
+    def get_chat_completion_content(self, messages: List[Dict], config: Optional[Dict] = None) -> str:
+        return "This is a mocked response from the offline ChatGPT module."
+    def get_tool_calling_response(self, messages: List[Dict], tools: List[Dict]) -> Dict:
+        logger.info("MOCK ChatGPTModule is selecting a tool...")
+        user_prompt = messages[-1]['content'].lower()
+        if "list" in user_prompt and "file" in user_prompt:
+            return {"tool_calls": [{"function": {"name": "list_files", "arguments": '{"path": "."}'}}]}
+        elif "read" in user_prompt:
+            return {"tool_calls": [{"function": {"name": "read_file", "arguments": '{"path": "README.md"}'}}]}
+        else:
+            return {"content": "I'm not sure which tool to use. Can you be more specific?"}
+
+class MockGeminiModule:
+    def __init__(self, api_key=None): logger.info("Initialized MOCK GeminiModule.")
+    def get_chat_completion_content(self, messages: List[Dict], config: Optional[Dict] = None) -> str:
+        return "This is a mocked response from the offline Gemini module."
+
+class MockPerplexityModule:
+    def __init__(self, api_key=None): logger.info("Initialized MOCK PerplexityModule.")
+    def get_chat_completion_content(self, messages: List[Dict], config: Optional[Dict] = None) -> str:
+        return "This is a mocked response from the offline Perplexity module."
+
+class MockPentestGPTModule:
+    def __init__(self, llm_interface=None): logger.info("Initialized MOCK PentestGPTModule.")
+    def analyze_tool_output(self, tool_name: str, tool_output: str) -> Dict:
+        return {
+            "findings": ["Mock finding based on tool output."],
+            "vulnerabilities": ["Mock vulnerability assessment."],
+            "next_step": "Mock suggestion for the next step."
+        }
+
+
 class AIAgent:
     """
-    A unified agent providing access to multiple AI models and specialized modules.
+    A unified agent that can operate in 'live' or 'mock' mode.
     """
-    def __init__(self,
-                 openai_api_key: Optional[str] = None,
-                 gemini_api_key: Optional[str] = None,
-                 perplexity_api_key: Optional[str] = None):
-        if not DEVIN_CORE_AVAILABLE:
-            raise ImportError(f"A core Devin module is missing. Error: {_import_error}")
-        
-        logger.info("Initializing AIAgent with all live AI provider modules...")
+    def __init__(self, mode: str = 'live', **kwargs):
+        self.mode = mode
+        logger.info(f"Initializing AIAgent in '{self.mode.upper()}' mode...")
 
-        self.openai_module = ChatGPTModule(api_key=openai_api_key) if openai_api_key else None
-        self.gemini_module = GeminiModule(api_key=gemini_api_key) if gemini_api_key else None
-        self.perplexity_module = PerplexityModule(api_key=perplexity_api_key) if perplexity_api_key else None
-        self.pentest_gpt_module = PentestGPTAIModule(llm_interface=self.openai_module) if self.openai_module else None
+        if self.mode == 'live':
+            # --- LIVE MODE: Initialize real API clients ---
+            self.openai_module = ChatGPTModule(api_key=kwargs.get("openai_api_key")) if kwargs.get("openai_api_key") else None
+            self.gemini_module = GeminiModule(api_key=kwargs.get("gemini_api_key")) if kwargs.get("gemini_api_key") else None
+            self.perplexity_module = PerplexityModule(api_key=kwargs.get("perplexity_api_key")) if kwargs.get("perplexity_api_key") else None
+            self.pentest_gpt_module = PentestGPTAIModule(llm_interface=self.openai_module) if self.openai_module else None
+        else:
+            # --- MOCK MODE: Initialize mock clients ---
+            self.openai_module = MockChatGPTModule()
+            self.gemini_module = MockGeminiModule()
+            self.perplexity_module = MockPerplexityModule()
+            self.pentest_gpt_module = MockPentestGPTModule()
 
         self.provider_map = {
             AIProvider.OPENAI: self.openai_module,
