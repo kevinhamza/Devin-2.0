@@ -14,7 +14,7 @@ h11==0.16.0
 httpcore==1.0.2
 httpx>=0.25.2
 idna==3.7
-importlib-resources==6.1.1
+importlib-resources==6.5.2
 kiwisolver==1.4.5
 matplotlib==3.8.1
 MouseInfo==0.1.3
