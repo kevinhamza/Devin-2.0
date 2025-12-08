@@ -25,7 +25,7 @@ packaging==23.2
 Pillow==10.3.0
 prompt-toolkit==3.0.39
 PyAutoGUI==0.9.54
-pydantic==2.4.2
+pydantic==2.12.5
 pydantic_core==2.10.1
 PyGetWindow==0.0.9
 PyMsgBox==1.0.9
