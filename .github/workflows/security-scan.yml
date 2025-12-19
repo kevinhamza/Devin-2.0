@@ -45,7 +45,7 @@ jobs:
       # Initializes the CodeQL tools for scanning.
       # Languages to analyze needs to be specified.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: python # Specify languages used in your project (e.g., python, javascript)
           # Optional: Add queries - uses default queries if omitted
@@ -59,7 +59,7 @@ jobs:
 
       # Performs the CodeQL analysis
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:python" # Optional: Category for display in Actions status checks
 
