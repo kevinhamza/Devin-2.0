@@ -233,7 +233,7 @@ from typing import List, Dict, Any, Optional
 # --- Import the REAL, integrated AI modules ---
 try:
     from modules.chatgpt_module import ChatGPTModule
-    from modules.gemini_module import GeminiModule
+    from modules.Gemini_module import GeminiModule
     from modules.perplexity_module import PerplexityModule
     from modules.pentestgpt_ai_module import PentestGPTAIModule
     DEVIN_CORE_AVAILABLE = True
@@ -347,7 +347,7 @@ class AIAgent:
         try:
             # Use the most powerful model for this critical reasoning step
             openai_tools = [{"type": "function", "function": tool} for tool in tools]
-            response_message = self.openai_module.get_tool_calling_response(messages, openai_tools_schema)
+            response_message = self.openai_module.get_tool_calling_response(messages, openai_tools)
 
             if response_message and response_message.get("tool_calls"):
                 tool_call = response_message["tool_calls"][0]

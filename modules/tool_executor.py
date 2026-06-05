@@ -50,6 +50,17 @@ class ToolExecutor:
         self.code_retriever: CodeRetriever = managers.get("code_retriever")
         self.data_logger: DataLogger = managers.get("data_logger")
         self.code_executor: CodeExecutor = managers.get("code_executor", CodeExecutor())
+        # --- Ported OpenClaw Managers ---
+        self.messaging_gateway = managers.get("messaging_gateway")
+        self.canvas_server = managers.get("canvas_server")
+        
+        # --- Extended Capability Managers ---
+        self.robotics_manager = managers.get("robotics_manager")
+        self.social_manager = managers.get("social_manager")
+        self.email_client = managers.get("email_client")
+        self.hashing_tools = managers.get("hashing_tools")
+        self.symmetric_crypto = managers.get("symmetric_crypto")
+        self.asymmetric_crypto = managers.get("asymmetric_crypto")
 
     def _register_tool(self, name: str, function: Callable, description: str, is_dangerous: bool = False):
         """Registers a single tool in the tool registry."""
@@ -74,11 +85,46 @@ class ToolExecutor:
         self._register_tool("read_file", self.os_operator.read_file, "Reads the content of a specified file.")
         self._register_tool("write_file", self.os_operator.write_file, "Writes content to a specified file.", is_dangerous=True)
         
+        # --- Desktop Automation ---
+        self._register_tool("move_mouse", self.desktop_automator.move_mouse_to, "Moves the mouse to specific (x, y) coordinates.")
+        self._register_tool("click_mouse", self.desktop_automator.mouse_click, "Clicks the mouse (left or right).")
+        self._register_tool("type_text", self.desktop_automator.type_text, "Types text on the keyboard.")
+        self._register_tool("take_screenshot", self.desktop_automator.take_screenshot, "Takes a screenshot of the current screen.")
+        
         # --- Web Automation ---
         self._register_tool("navigate_to_url", self.web_automator.navigate_to_url, "Opens a web browser and navigates to a specific URL.")
         self._register_tool("scrape_web_page", self.web_automator.scrape_visible_text, "Scrapes all visible text from the current web page.")
         
-        # Add more tools from other modules as needed...
+        # --- OpenClaw Ported Tools ---
+        if self.messaging_gateway:
+            self._register_tool("send_message", self.messaging_gateway.send_message, "Sends a message via a specified channel (e.g., 'Telegram') to a recipient.")
+        
+        if self.canvas_server:
+            self._register_tool("update_canvas", self.canvas_server.log, "Updates the live visual canvas with a message and status level (info, success, error).")
+            self._register_tool("clear_canvas", self.canvas_server.clear, "Clears all content from the live visual canvas.")
+            
+        # --- Robotics Tools ---
+        if self.robotics_manager:
+            self._register_tool("robot_move_relative", self.robotics_manager.move_relative, "Moves the robot relative to its current position.")
+            self._register_tool("robot_rotate_relative", self.robotics_manager.rotate_relative, "Rotates the robot by a specific angle.")
+            self._register_tool("robot_stop", self.robotics_manager.trigger_emergency_stop, "Triggers an emergency stop on the robot.", is_dangerous=True)
+            
+        # --- Social Media Tools ---
+        if self.social_manager:
+            self._register_tool("search_social_media", self.social_manager.search_posts, "Searches for posts on Twitter or Reddit.")
+            
+        # --- Email Tools ---
+        if self.email_client:
+            self._register_tool("send_email", self.email_client.send_email, "Sends an email via SMTP.", is_dangerous=True)
+            self._register_tool("search_emails", self.email_client.search_emails, "Searches for emails via IMAP.")
+            
+        # --- Crypto Tools ---
+        if self.hashing_tools:
+            self._register_tool("hash_data", self.hashing_tools.hash_data, "Hashes data using a specified algorithm (sha256, etc.).")
+        if self.symmetric_crypto:
+            self._register_tool("encrypt_data", self.symmetric_crypto.encrypt, "Encrypts data using symmetric encryption.")
+            self._register_tool("decrypt_data", self.symmetric_crypto.decrypt, "Decrypts data using symmetric encryption.")
+
 
     def get_available_tools(self) -> List[Dict[str, str]]:
         """Returns a list of tool schemas for the AI to use."""
