@@ -40,26 +40,30 @@ class SystemMetrics:
 class LocalMonitor:
     """Monitors the local machine using the psutil library."""
     def __init__(self):
-        if 'psutil' not in sys.modules:
-            raise ImportError("The 'psutil' library is required for LocalMonitor.")
+        if 'psutil' not in sys.modules and not DEVIN_CORE_AVAILABLE:
+             logger.warning("psutil not found. LocalMonitor metrics will be empty.")
         self.host = "localhost"
         logger.info("LocalMonitor initialized.")
 
     def get_metrics(self) -> SystemMetrics:
         """Gathers and returns metrics from the local system."""
-        net_io = psutil.net_io_counters()
-        return SystemMetrics(
-            host=self.host,
-            cpu_usage_percent=psutil.cpu_percent(interval=1),
-            memory_usage_percent=psutil.virtual_memory().percent,
-            disk_usage_percent=psutil.disk_usage('/').percent,
-            net_bytes_sent=net_io.bytes_sent,
-            net_bytes_recv=net_io.bytes_recv
-        )
+        try:
+            import psutil
+            net_io = psutil.net_io_counters()
+            return SystemMetrics(
+                host=self.host,
+                cpu_usage_percent=psutil.cpu_percent(interval=1),
+                memory_usage_percent=psutil.virtual_memory().percent,
+                disk_usage_percent=psutil.disk_usage('/').percent,
+                net_bytes_sent=net_io.bytes_sent,
+                net_bytes_recv=net_io.bytes_recv
+            )
+        except (ImportError, Exception):
+            return SystemMetrics(host=self.host)
 
 class RemoteMonitor:
     """Monitors a remote Linux machine by executing commands over SSH."""
-    def __init__(self, ssh_client: GenericRemoteShell):
+    def __init__(self, ssh_client: 'GenericRemoteShell'):
         self.ssh = ssh_client
         self.host = ssh_client.host
         logger.info(f"RemoteMonitor initialized for host '{self.host}'.")
@@ -119,7 +123,7 @@ class SystemMonitorFacade:
     """
     def __init__(self, monitors: List[Any]):
         if not DEVIN_CORE_AVAILABLE:
-            raise ImportError(f"A core Devin module is missing. Error: {_import_error}")
+            logger.warning(f"Some system monitoring features may be degraded. Error: {_import_error}")
         
         self.monitors = monitors
         logger.info(f"SystemMonitorFacade initialized with {len(monitors)} monitors.")

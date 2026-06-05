@@ -42,19 +42,23 @@ class LiveSpeechRecognizer:
     """
     def __init__(self, openai_api_key: Optional[str] = None):
         if not SPEECH_RECOGNITION_AVAILABLE or not PYAUDIO_AVAILABLE:
-            raise ImportError("SpeechRecognition and PyAudio are required. 'pip install SpeechRecognition PyAudio'")
-        
-        self.recognizer = sr.Recognizer()
-        self.microphone = sr.Microphone()
+            logger.warning("SpeechRecognition and PyAudio are required for voice input.")
+            self.recognizer = None
+            self.microphone = None
+        else:
+            self.recognizer = sr.Recognizer()
+            self.microphone = sr.Microphone()
 
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         if self.openai_api_key:
-            self.openai_client = openai.OpenAI(api_key=self.openai_api_key)
+            try:
+                self.openai_client = openai.OpenAI(api_key=self.openai_api_key)
+            except Exception:
+                self.openai_client = None
         else:
             self.openai_client = None
-            logger.warning("OpenAI API key not set. 'whisper' engine will be unavailable.")
 
-    def _transcribe_with_whisper(self, audio_data: sr.AudioData) -> Optional[str]:
+    def _transcribe_with_whisper(self, audio_data) -> Optional[str]:
         """Saves audio data to a temp file and sends it to Whisper API."""
         if not self.openai_client:
             logger.error("OpenAI client not configured. Cannot use 'whisper' engine.")

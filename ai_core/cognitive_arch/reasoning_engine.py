@@ -192,12 +192,25 @@ class ReasoningEngine:
 
         # Option 2: Call external LLM for planning/reasoning (more likely)
         prompt = f"""Given the current state:\n{current_state_summary}\n\n
-        Based ONLY on the information provided, determine the single best next action or step to achieve the current goal.
-        Possible actions include: query_ltm(query), web_search(query), run_tool(tool_name, args), formulate_report(), ask_user(question), final_answer(answer), no_action().
-        Provide JUST the next action and its parameters, or a brief plan leading to the next action. If the goal is met, use final_answer. If more info is needed from the user, use ask_user.
-        Example response: run_tool(tool_name='nmap', args='-sV example.com')
-        Example response: ask_user(question='What specific domain should I scan?')
-        Example response: final_answer(answer='Scan complete. Found 3 vulnerabilities.')
+        You are a universal AGI with full control over the operating system, hardware (robotics), and digital accounts (social media, email).
+        Your goal is to autonomously achieve the user's high-level goal using any available tools.
+
+        Available Actions/Tools:
+        - query_ltm(query='...'): Search long-term memory.
+        - run_tool(tool_name='...', args='...'): Execute a specific tool.
+          * OS Control: move_mouse, click_mouse, type_text, take_screenshot, list_files, read_file, write_file.
+          * Communication: send_message (Telegram), send_email, search_emails.
+          * Social Media: search_social_media (Twitter/Reddit).
+          * Robotics: robot_move_relative, robot_rotate_relative, robot_stop.
+          * Security: conduct_passive_reconnaissance, conduct_network_scan, conduct_web_scan.
+          * Visualization: update_canvas, clear_canvas.
+          * General: execute_shell, execute_python (Universal - use for anything else).
+        - web_search(query='...')
+        - ask_user(question='...')
+        - final_answer(answer='...')
+        - no_action()
+
+        Provide JUST the next action in function-like format: action_name(key='value').
         """
         llm_suggestion = self.ai_client.query(prompt=prompt)
         # --- End Placeholder ---
@@ -207,44 +220,32 @@ class ReasoningEngine:
     def _formulate_action(self, plan_or_action_string: str) -> Tuple[str, Dict[str, Any]]:
         """
         Parses the output of the _think step into a specific action type and parameters.
-        This needs robust parsing based on the expected output format from _think.
+        Uses regex for robust extraction of function-like strings.
         """
-        # --- Placeholder for parsing logic ---
-        # This needs to reliably parse strings like:
-        # "run_tool(tool_name='nmap', args='-sV example.com')"
-        # "ask_user(question='What specific domain?')"
-        # "final_answer(answer='Report text...')"
-        # "web_search(query='latest CVEs')"
+        import re
 
-        plan_lower = plan_or_action_string.lower()
-        # Very basic parsing example:
-        if plan_lower.startswith("run_tool"):
-            # TODO: Implement robust parsing for args
-            tool_name = plan_or_action_string[plan_or_action_string.find("tool_name='")+len("tool_name='"):plan_or_action_string.find("'", plan_or_action_string.find("tool_name='")+len("tool_name='"))]
-            args = plan_or_action_string[plan_or_action_string.find("args='")+len("args='"):-1] # Simple arg extraction
-            return "run_tool", {"tool_name": tool_name, "args": args}
-        elif plan_lower.startswith("ask_user"):
-             # TODO: Implement robust parsing for question
-            question = plan_or_action_string[plan_or_action_string.find("question='")+len("question='"):-1]
-            return "ask_user", {"question": question}
-        elif plan_lower.startswith("final_answer"):
-             # TODO: Implement robust parsing for answer
-            answer = plan_or_action_string[plan_or_action_string.find("answer='")+len("answer='"):-1]
-            return "final_answer", {"answer": answer}
-        elif plan_lower.startswith("web_search"):
-             # TODO: Implement robust parsing for query
-            query = plan_or_action_string[plan_or_action_string.find("query='")+len("query='"):-1]
-            return "web_search", {"query": query}
-        elif plan_lower.startswith("query_ltm"):
-             # TODO: Implement robust parsing for query
-            query = plan_or_action_string[plan_or_action_string.find("query='")+len("query='"):-1]
-            return "query_ltm", {"query": query} # Assuming dispatcher handles LTM query
-        # Add more action types as needed (file_io, web_control, etc.)
-        else:
-            # If parsing fails or plan is unclear, maybe default to asking user or stopping
+        # Regex to match function_name(key1='val1', key2="val2", ...)
+        # It handles both single and double quotes for values.
+        pattern = r"(\w+)\((.*)\)"
+        match = re.search(pattern, plan_or_action_string)
+
+        if not match:
             print(f"Warning: Could not parse plan into specific action: '{plan_or_action_string}'")
             return "clarification_needed", {"question": f"I received an unclear plan: '{plan_or_action_string[:100]}...'. Could you please clarify the goal or next step?"}
-        # --- End Placeholder ---
+
+        action_type = match.group(1).lower()
+        args_string = match.group(2)
+
+        # Extract keyword arguments using regex: key='value' or key="value"
+        kv_pattern = r"(\w+)\s*=\s*['\"]([^'\"]*)['\"]"
+        params = dict(re.findall(kv_pattern, args_string))
+
+        # Basic validation/cleanup for known action types
+        if action_type == "no_action":
+            return "no_action", {}
+        
+        return action_type, params
+
 
 
 # Example Usage (conceptual)

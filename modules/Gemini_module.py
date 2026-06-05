@@ -390,7 +390,7 @@ class GeminiModule:
 
     def generate_content(
         self,
-        contents: List[ContentDict],
+        contents: List['ContentDict'],
         generation_config: Optional[GeminiGenerationConfig] = None,
         safety_settings: Optional[List[GeminiSafetySetting]] = None,
         model_name: Optional[str] = None
@@ -422,7 +422,7 @@ class GeminiModule:
     # --- ADDED FEATURE: Streaming Response ---
     def generate_content_stream(
         self,
-        contents: List[ContentDict],
+        contents: List['ContentDict'],
         generation_config: Optional[GeminiGenerationConfig] = None,
         safety_settings: Optional[List[GeminiSafetySetting]] = None,
         model_name: Optional[str] = None
@@ -449,7 +449,7 @@ class GeminiModule:
             logger.error(f"An unexpected error occurred during streaming generation: {e}")
             yield f"Error: {e}"
 
-    def count_tokens(self, contents: List[ContentDict], model_name: Optional[str] = None) -> Optional[int]:
+    def count_tokens(self, contents: List['ContentDict'], model_name: Optional[str] = None) -> Optional[int]:
         """Counts tokens for a given set of contents."""
         # This function is unchanged from your version.
         current_model = model_name or self.DEFAULT_MODEL
