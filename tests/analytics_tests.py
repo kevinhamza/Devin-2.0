@@ -62,7 +62,7 @@ class TestAnalyticsPipeline(unittest.TestCase):
 
     def setUp(self):
         """Create a new facade and reset the server's state before each test."""
-        self.facade = AnalyticsFacade(base_url=self.server_url)
+        self.facade = AnalyticsFacade(server_url=self.server_url)
         # Reset the server's in-memory DataFrame for test isolation
         requests.post(f"{self.server_url}/reset")
 
