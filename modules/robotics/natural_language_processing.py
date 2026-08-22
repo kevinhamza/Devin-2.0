@@ -257,34 +257,54 @@ class NLPProcessor:
             ("what is your status", Intent.QUERY_STATUS), ("report battery level", Intent.QUERY_STATUS),
         ]
         X_train = [text for text, intent in train_data]
-        y_train = [intent for text, intent in train_data]
+        # scikit-learn's classifiers can't infer a target type from raw Enum
+        # members (type_of_target returns "unknown" and fit() rejects it), so
+        # train on the enum names and map back to Intent after predicting.
+        y_train = [intent.name for text, intent in train_data]
         
         self.intent_classifier = Pipeline([
             ('tfidf', TfidfVectorizer()),
-            ('clf', LogisticRegression(solver='liblinear')),
+            # liblinear only supports binary classification; this has 4 intent
+            # classes, so it needs a solver with native multiclass support.
+            ('clf', LogisticRegression(solver='lbfgs', max_iter=1000)),
         ])
         self.intent_classifier.fit(X_train, y_train)
         logger.info("Local intent classifier trained successfully.")
 
     def _determine_intent_ml(self, text: str) -> Intent:
         """Determines intent using the trained scikit-learn model."""
-        # The model returns a list with one item
-        predicted_intent = self.intent_classifier.predict([text.lower()])[0]
-        return predicted_intent
+        # The model returns a list with one item; it was trained on Intent
+        # names (strings), so map the prediction back to the Intent enum.
+        predicted_name = self.intent_classifier.predict([text.lower()])[0]
+        return Intent[predicted_name]
 
     def _extract_entities(self, doc: Doc) -> Dict[str, Any]:
         """Extracts entities using spaCy's dependency parsing and NER."""
         entities = {}
+        captured_adjectives = set()
         # Find the main object (noun chunks are great for this)
         for chunk in doc.noun_chunks:
             if "obj" in chunk.root.dep_: # direct object, object of preposition, etc.
-                entities['object'] = chunk.text
+                # Drop leading determiners ("the", "a") so callers composing
+                # their own phrasing (e.g. "the {color} {object}") don't end
+                # up with a duplicated article.
+                content_tokens = [t for t in chunk if t.pos_ != "DET"]
+                entities['object'] = " ".join(t.text for t in content_tokens) if content_tokens else chunk.text
                 # Check for adjectives modifying the object
                 for token in chunk:
                     if token.pos_ == "ADJ":
                         entities.setdefault('attributes', []).append(token.text)
+                        captured_adjectives.add(token.i)
                 break
-        
+
+        # Some modifiers (e.g. "the red one" in a follow-up clarification like
+        # "find the ball" + "the red one") attach to a token that isn't part
+        # of the object's own noun chunk, so noun-chunk scanning alone misses
+        # them. Catch any adjectival modifier (amod) not already captured.
+        for token in doc:
+            if token.pos_ == "ADJ" and token.dep_ == "amod" and token.i not in captured_adjectives:
+                entities.setdefault('attributes', []).append(token.text)
+
         # Find locations (GPE - Geopolitical Entity)
         for ent in doc.ents:
             if ent.label_ == "GPE":
