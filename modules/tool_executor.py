@@ -2,6 +2,7 @@
 # Purpose: The central dispatcher for executing tool calls from the AI agent.
 #          It maps tool names to Python functions and handles execution.
 
+import inspect
 import logging
 from typing import Dict, Any, List, Callable
 
@@ -63,12 +64,44 @@ class ToolExecutor:
         self.symmetric_crypto = managers.get("symmetric_crypto")
         self.asymmetric_crypto = managers.get("asymmetric_crypto")
 
+    _TYPE_MAP = {
+        str: "string", int: "integer", float: "number",
+        bool: "boolean", dict: "object", list: "array",
+    }
+
+    def _infer_schema(self, function: Callable) -> Dict[str, Any]:
+        """
+        Builds a JSON schema for a tool's parameters from its function
+        signature, since the AI providers otherwise have no way to know what
+        arguments a tool expects and can only guess.
+        """
+        try:
+            signature = inspect.signature(function)
+        except (TypeError, ValueError):
+            return {"type": "object", "properties": {}}
+
+        properties: Dict[str, Any] = {}
+        required: List[str] = []
+        for param_name, param in signature.parameters.items():
+            if param_name == "self" or param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+                continue
+            json_type = self._TYPE_MAP.get(param.annotation, "string")
+            properties[param_name] = {"type": json_type}
+            if param.default is inspect.Parameter.empty:
+                required.append(param_name)
+
+        schema: Dict[str, Any] = {"type": "object", "properties": properties}
+        if required:
+            schema["required"] = required
+        return schema
+
     def _register_tool(self, name: str, function: Callable, description: str, is_dangerous: bool = False):
         """Registers a single tool in the tool registry."""
         self.tools[name] = {
             "function": function,
             "description": description,
-            "is_dangerous": is_dangerous
+            "is_dangerous": is_dangerous,
+            "parameters": self._infer_schema(function),
         }
 
     def _register_all_tools(self):
@@ -133,10 +166,10 @@ class ToolExecutor:
             self._register_tool("decrypt_data", self.symmetric_crypto.decrypt, "Decrypts data using symmetric encryption.")
 
 
-    def get_available_tools(self) -> List[Dict[str, str]]:
+    def get_available_tools(self) -> List[Dict[str, Any]]:
         """Returns a list of tool schemas for the AI to use."""
         return [
-            {"name": name, "description": data["description"]}
+            {"name": name, "description": data["description"], "parameters": data["parameters"]}
             for name, data in self.tools.items()
         ]
 

@@ -75,7 +75,12 @@ class TaskCompletionComponent(UtilityComponent):
             "and 1.0 (a perfect plan to achieve the goal). Your response must be ONLY the number."
         )
         try:
-            response = self.ai_agent.get_general_chat_response([{"role": "user", "content": prompt}], provider=AIProvider.OPENAI)
+            # Hardcoding OPENAI here meant this always failed (and silently
+            # scored every plan 0.0) whenever only another provider, e.g.
+            # Claude, was configured. Use whichever tool-calling provider is
+            # actually available, same preference as AIAgent's tool selection.
+            provider = AIProvider.ANTHROPIC if self.ai_agent.claude_module else AIProvider.OPENAI
+            response = self.ai_agent.get_general_chat_response([{"role": "user", "content": prompt}], provider=provider)
             return float(response.strip())
         except (ValueError, TypeError):
             logger.error("Could not parse LLM response for Task Completion evaluation.")
