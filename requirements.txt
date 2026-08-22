@@ -52,6 +52,7 @@ opencv-python
 # --- Threat Intelligence & Pentesting ---
 python-nmap
 beautifulsoup4
+scapy
 
 # --- Other Utilities ---
 tqdm
