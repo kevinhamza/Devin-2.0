@@ -14,6 +14,8 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(project_root))
 
+_import_error = None
+
 try:
     from servers.analytics_server import AnalyticsServer
     from modules.analytics_module import AnalyticsFacade

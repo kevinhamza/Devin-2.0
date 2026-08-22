@@ -12,6 +12,8 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
+_import_error = None
+
 try:
     from modules.robotics.voice_assistant import VoiceAssistant
     from modules.robotics.speech_to_text import SpeechToText

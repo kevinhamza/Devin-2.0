@@ -189,6 +189,8 @@
 # Purpose: Provides a hybrid NLU system to understand user commands, using
 #          a local ML model for speed and an LLM for complex queries.
 
+from __future__ import annotations
+
 import logging
 import json
 from enum import Enum, auto
@@ -215,6 +217,7 @@ if not logger.handlers:
     _console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(_console_handler)
     logger.setLevel(logging.INFO)
+logger.propagate = False
 
 class Intent(Enum):
     FIND_OBJECT = auto()
@@ -226,8 +229,8 @@ class Intent(Enum):
 @dataclass
 class StructuredCommand:
     intent: Intent
-    entities: Dict[str, Any] = field(default_factory=dict)
     original_text: str
+    entities: Dict[str, Any] = field(default_factory=dict)
 
 class NLPProcessor:
     """Processes natural language text into structured commands using a hybrid approach."""

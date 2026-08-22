@@ -11,6 +11,8 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
+_import_error = None
+
 try:
     # --- Import the specific utility classes and functions to be tested ---
     from modules.cloud_integration_utilities import DataNormalizer, CloudProvider, CloudResourceType, NormalizedCloudResource
