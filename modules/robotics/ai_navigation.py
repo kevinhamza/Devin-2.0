@@ -236,7 +236,7 @@ import threading
 import time
 import math
 from enum import Enum, auto
-from typing import Optional, Any, Tuple, Dict
+from typing import Optional, Any, Tuple, Dict, Callable
 
 try:
     import numpy as np

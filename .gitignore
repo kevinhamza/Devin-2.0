@@ -145,6 +145,8 @@ temp/
 *.sqlite3
 *.db
 local.db
+*.feather
+robot_logs/
 
 # --- Terraform ---
 .terraform/

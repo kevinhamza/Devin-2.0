@@ -53,6 +53,7 @@ opencv-python
 python-nmap
 beautifulsoup4
 scapy
+pymetasploit3
 
 # --- Other Utilities ---
 tqdm

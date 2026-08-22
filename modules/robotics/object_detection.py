@@ -261,6 +261,8 @@
 # Purpose: Provides state-of-the-art object detection capabilities using the
 #          'ultralytics' library with pre-trained YOLO models.
 
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
 from typing import List, Tuple, Dict, Optional
