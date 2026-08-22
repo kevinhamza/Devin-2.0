@@ -17,7 +17,6 @@ try:
     from modules.all_ais_modules import AIAgent, AIProvider
     from singularity.goal_system.utility_function import UtilityFunction, Plan
     from modules.code_execution import CodeExecutor
-    from modules.automation_tools import FileSystemAutomator
     DEVIN_CORE_AVAILABLE = True
 except ImportError as e:
     DEVIN_CORE_AVAILABLE = False
@@ -42,7 +41,6 @@ class SelfModifyingCodeGenerator:
         self.agent = ai_agent
         self.utility_function = utility_function
         self.executor = code_executor
-        self.fs = FileSystemAutomator()
         self.project_root = Path(project_root)
 
     def analyze_module(self, module_path: str) -> Optional[Dict]:
