@@ -268,12 +268,21 @@ class MockChatGPTModule:
     #         return {"content": "I'm not sure which tool to use. Can you be more specific?"}
     def get_tool_calling_response(self, messages: List[Dict], tools: List[Dict]) -> Dict:
         logger.info("MOCK ChatGPTModule is selecting a tool...")
+
+        # A real LLM would recognize a tool result already answers the goal
+        # and stop; this canned mock has no such judgment, so without this
+        # check it re-selects the same tool every turn until main.py's
+        # 20-message safety cap ends the session. Once any tool has run,
+        # consider the (single-step) mock goal satisfied.
+        if any(msg['role'] == 'tool' for msg in messages):
+            return {"content": "Mock goal satisfied after one tool call."}
+
         user_prompt = ""
         for msg in reversed(messages):
             if msg['role'] == 'user':
                 user_prompt = msg['content'].lower()
                 break
-        
+
         # --- UPGRADED MOCK LOGIC ---
         if "list" in user_prompt and "file" in user_prompt:
             return {"tool_calls": [{"function": {"name": "list_files", "arguments": '{"path": "."}'}}]}

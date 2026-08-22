@@ -62,6 +62,10 @@ class TaskCompletionComponent(UtilityComponent):
         self.ai_agent = ai_agent
 
     def evaluate(self, plan: Plan, user_goal: str, constraints: List[str]) -> float:
+        if self.ai_agent.mode == 'mock':
+            logger.info("TaskCompletionComponent: Running in mock mode. Returning default score.")
+            return 1.0 # Return a default high score in mock mode; no real LLM to ask.
+
         plan_steps_str = "\n".join([f"- {step['tool']}: {step.get('command') or step.get('parameters')}" for step in plan.steps])
         prompt = (
             "You are a meticulous AI project manager. Evaluate the following plan based on how effectively it achieves the user's goal. "
@@ -76,12 +80,6 @@ class TaskCompletionComponent(UtilityComponent):
         except (ValueError, TypeError):
             logger.error("Could not parse LLM response for Task Completion evaluation.")
             return 0.0 # Neutral score on failure
-       
-    def calculate_utility(self, plan: Plan, goal: str, context: List[Dict]) -> float:
-        # --- ADDED MOCK MODE CHECK ---
-        if self.ai_agent.mode == 'mock':
-            logger.info("TaskCompletionComponent: Running in mock mode. Returning default score.")
-            return 1.0 # Return a default high score in mock mode
 
 class SafetyComponent(UtilityComponent):
     """Evaluates the safety of a plan, integrating with the Security Dashboard."""
